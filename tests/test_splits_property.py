@@ -2,6 +2,8 @@
 
 Feature: finetune-and-serve, Property 1: Split disjointness and overlap reporting.
 Validates: Requirements 2.3, 2.4
+Feature: finetune-and-serve, Property 2: Deterministic split membership under a fixed seed.
+Validates: Requirements 2.3, 2.5
 """
 
 from __future__ import annotations
@@ -48,3 +50,14 @@ def test_split_disjointness_and_overlap_reporting(exs, data):
     assert {k: set(v) for k, v in overlaps.items()} == expected
     assert all(v == sorted(v) for v in overlaps.values())
     assert overlap_total(overlaps) == len(injected)
+
+
+@settings(max_examples=100, derandomize=True, deadline=None)
+@given(exs=examples(), seed=st.integers(min_value=0, max_value=2**31 - 1), other=st.integers(min_value=0, max_value=2**31 - 1))
+def test_deterministic_split_membership(exs, seed, other):
+    """Feature: finetune-and-serve, Property 2: Deterministic split membership under a fixed seed."""
+    first, second, different = build_splits(exs, seed), build_splits(exs, seed), build_splits(exs, other)
+    assert first == second == different
+    official = {"train": "train", "dev": "validation", "test": "test"}
+    for name in ("train", "validation", "test"):
+        assert [e.example_id for e in first.by_name(name)] == [e.example_id for e in exs if official[e.partition] == name]

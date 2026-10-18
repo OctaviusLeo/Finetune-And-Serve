@@ -185,7 +185,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - **Property 1: Split disjointness and overlap reporting** — splits pairwise disjoint; injected overlap reported exactly with the correct count.
   - **Validates: Requirements 2.3, 2.4** _Requirements: 9.1_
 
-- [ ] 2.3 Write property tests for deterministic split membership and transform
+- [x] 2.3 Write property tests for deterministic split membership and transform
   - **Property 2: Deterministic split membership under a fixed seed** and **Property 3: Deterministic transform and malformed exclusion** — one Hypothesis test each.
   - **Validates: Requirements 2.3, 2.5, 2.6**
 
