@@ -234,7 +234,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - It records each baseline's prompt template and the hosted spend. If the ledger refuses a request, it stops, reports the spend reached and the cap, and exits non-zero.
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.6_
 
-- [ ] 2.12 Write unit tests for the baselines runner
+- [x] 2.12 Write unit tests for the baselines runner
   - Test the spend-cap stop path, that each result records its template, and that local and hosted results share the same Test ids, with fakes for inference and HTTP.
   - _Requirements: 3.4, 3.6_
 
