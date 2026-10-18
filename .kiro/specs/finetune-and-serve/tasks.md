@@ -411,7 +411,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Test that it runs on CPU, produces the expected result, and fails on malformed input.
   - _Requirements: 9.3_
 
-- [ ] 6.7 Configure the GitHub Actions CI pipeline
+- [x] 6.7 Configure the GitHub Actions CI pipeline
   - Write `.github/workflows/ci.yml`: on every push and pull request, on `ubuntu-latest`, run `uv sync --frozen`, `bash scripts/test_unit.sh`, and `uv run --frozen python -m fts.smoke_eval`. The run fails if any of them fails. CI never runs a GPU training Run and needs no secret.
   - Verify:
     1. Commit and push the current branch. Find the run with `gh run list --commit <full HEAD hash> --json databaseId,status,conclusion`, and poll `gh run view <id> --json status,conclusion,jobs` every few minutes until it completes. It must succeed.
