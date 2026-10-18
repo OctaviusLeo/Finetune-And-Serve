@@ -17,8 +17,8 @@ RUN = {"run_id": "B-seed2", "seed": 2, "adapter_path": "adapters/B-seed2"}
 QUANT_LOG = """main: build = 11580
 llama_model_loader: file type = F16 (16.00 BPW)
 print_info: file size   = 2.88 GiB (16.00 BPW)
-llama_model_quantize_impl: model size  =  2944.66 MB
-llama_model_quantize_impl: quant size  =  1065.65 MB
+llama_model_quantize_impl: model size  =  2944.68 MiB (16.00 BPW)
+llama_model_quantize_impl: quant size  =   934.69 MiB (5.08 BPW)
 main: quantize time = 12345.67 ms
 """
 
@@ -54,7 +54,7 @@ def test_quantized_model_records_method_and_bit_width(tmp_path):
     assert models == [quantize.QuantizedModel("models/ft-f16.gguf", "gguf-f16", 16), quantize.QuantizedModel("models/ft-q4_k_m.gguf", "gguf-q4_k_m", 4)]
     assert details["files"]["gguf-q4_k_m"]["size_bytes"] == 1000 and details["files"]["gguf-f16"]["bits_per_weight_from_size"] == 3000 * 8 / 1500
     assert details["image_digest"].startswith("ghcr.io/ggml-org/llama.cpp@sha256:") and details["merged_parameters"] == 1500
-    assert details["llama_quantize"]["quant_size_mb"] == 1065.65 and details["llama_quantize"]["input_bpw"] == 16.0
+    assert details["llama_quantize"]["quant_size_mib"] == 934.69 and details["llama_quantize"]["quant_bpw"] == 5.08 and details["llama_quantize"]["input_bpw"] == 16.0
 
 
 def test_docker_commands_follow_the_design(tmp_path):
@@ -69,9 +69,10 @@ def test_docker_commands_follow_the_design(tmp_path):
 
 
 def test_parse_quantize_log_handles_missing_values():
-    assert quantize.parse_quantize_log("nothing here") == {"model_size_mb": None, "quant_size_mb": None, "input_bpw": None, "reported_bpw": []}
+    assert quantize.parse_quantize_log("nothing here") == {"model_size_mib": None, "quant_size_mib": None, "quant_bpw": None, "input_bpw": None, "reported_bpw": []}
     parsed = quantize.parse_quantize_log(QUANT_LOG)
-    assert parsed["model_size_mb"] == 2944.66 and parsed["reported_bpw"] == [16.0, 16.0]
+    assert parsed["model_size_mib"] == 2944.68 and parsed["reported_bpw"] == [16.0, 16.0, 16.0, 5.08]
+    assert quantize.parse_quantize_log("model size  =  10.5 MB\nquant size  =  4.2 MB")["quant_size_mib"] == 4.2  # older builds
 
 
 def test_run_command_returns_output_and_raises():

@@ -73,8 +73,10 @@ def parse_quantize_log(text: str) -> dict:
 
     bpw = [float(x) for x in re.findall(r"\(\s*([\d.]+)\s*BPW\s*\)", text)]
     return {
-        "model_size_mb": first(r"model size\s*=\s*([\d.]+)\s*MB"),
-        "quant_size_mb": first(r"quant size\s*=\s*([\d.]+)\s*MB"),
+        # llama-quantize prints e.g. "model size  =  2944.68 MiB (16.00 BPW)" (older builds: "MB")
+        "model_size_mib": first(r"model size\s*=\s*([\d.]+)\s*Mi?B"),
+        "quant_size_mib": first(r"quant size\s*=\s*([\d.]+)\s*Mi?B"),
+        "quant_bpw": first(r"quant size\s*=\s*[\d.]+\s*Mi?B\s*\(\s*([\d.]+)\s*BPW"),
         "input_bpw": bpw[0] if bpw else None,
         "reported_bpw": bpw,
     }

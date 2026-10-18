@@ -1,0 +1,89 @@
+{
+  "adapter_path": "adapters/B-seed2",
+  "commands": {
+    "convert": [
+      "ghcr.io/ggml-org/llama.cpp:full-b11580",
+      "--convert",
+      "/models/merged",
+      "--outtype",
+      "f16",
+      "--outfile",
+      "/models/ft-f16.gguf"
+    ],
+    "quantize": [
+      "ghcr.io/ggml-org/llama.cpp:full-b11580",
+      "--quantize",
+      "/models/ft-f16.gguf",
+      "/models/ft-q4_k_m.gguf",
+      "Q4_K_M"
+    ]
+  },
+  "convert_log_tail": [
+    "Writing:  96%|█████████▌| 2.96G/3.09G [00:09<00:00, 450Mbyte/s]",
+    "Writing:  98%|█████████▊| 3.02G/3.09G [00:09<00:00, 467Mbyte/s]",
+    "Writing: 100%|█████████▉| 3.08G/3.09G [00:09<00:00, 490Mbyte/s]",
+    "Writing: 100%|██████████| 3.09G/3.09G [00:09<00:00, 331Mbyte/s]",
+    "INFO:hf-to-gguf:Model successfully exported to /models/ft-f16.gguf"
+  ],
+  "files": {
+    "gguf-f16": {
+      "bit_width": 16,
+      "bits_per_weight_from_size": 16.032339248182545,
+      "method": "gguf-f16",
+      "path": "models/ft-f16.gguf",
+      "size_bytes": 3093668928
+    },
+    "gguf-q4_k_m": {
+      "bit_width": 4,
+      "bits_per_weight_from_size": 5.110002862291286,
+      "method": "gguf-q4_k_m",
+      "path": "models/ft-q4_k_m.gguf",
+      "size_bytes": 986048064
+    }
+  },
+  "image": "ghcr.io/ggml-org/llama.cpp:full-b11580",
+  "image_digest": "ghcr.io/ggml-org/llama.cpp@sha256:54f08f6cd7772aa0fd8e2813614d39b64da76d5fbca2216d94225e843a849b20",
+  "llama_cpp_build": "b11580",
+  "llama_quantize": {
+    "input_bpw": 16.0,
+    "model_size_mb": null,
+    "quant_size_mb": null,
+    "reported_bpw": [
+      16.0,
+      5.08
+    ]
+  },
+  "merged_parameters": 1543714304,
+  "models": [
+    {
+      "bit_width": 16,
+      "method": "gguf-f16",
+      "path": "models/ft-f16.gguf"
+    },
+    {
+      "bit_width": 4,
+      "method": "gguf-q4_k_m",
+      "path": "models/ft-q4_k_m.gguf"
+    }
+  ],
+  "quantize_log_tail": [
+    "[ 329/ 338] blk.27.attn_norm.weight              - [  1536,      1,      1,      1], type =    f32, size =    0.006 MiB",
+    "[ 330/ 338] blk.27.attn_output.weight            - [  1536,   1536,      1,      1], type =    f16, converting to q4_K .. size =     4.50 MiB ->     1.27 MiB",
+    "[ 331/ 338] blk.27.attn_q.bias                   - [  1536,      1,      1,      1], type =    f32, size =    0.006 MiB",
+    "[ 332/ 338] blk.27.attn_q.weight                 - [  1536,   1536,      1,      1], type =    f16, converting to q4_K .. size =     4.50 MiB ->     1.27 MiB",
+    "[ 333/ 338] blk.27.attn_v.bias                   - [   256,      1,      1,      1], type =    f32, size =    0.001 MiB",
+    "[ 334/ 338] blk.27.attn_v.weight                 - [  1536,    256,      1,      1], type =    f16, converting to q6_K .. size =     0.75 MiB ->     0.31 MiB",
+    "[ 335/ 338] blk.27.ffn_down.weight               - [  8960,   1536,      1,      1], type =    f16, converting to q6_K .. size =    26.25 MiB ->    10.77 MiB",
+    "[ 336/ 338] blk.27.ffn_gate.weight               - [  1536,   8960,      1,      1], type =    f16, converting to q4_K .. size =    26.25 MiB ->     7.38 MiB",
+    "[ 337/ 338] blk.27.ffn_norm.weight               - [  1536,      1,      1,      1], type =    f32, size =    0.006 MiB",
+    "[ 338/ 338] blk.27.ffn_up.weight                 - [  1536,   8960,      1,      1], type =    f16, converting to q4_K .. size =    26.25 MiB ->     7.38 MiB",
+    "llama_model_quantize_impl: model size  =  2944.68 MiB (16.00 BPW)",
+    "llama_model_quantize_impl: quant size  =   934.69 MiB (5.08 BPW)"
+  ],
+  "serving_run": "B-seed2",
+  "stamp": {
+    "command": "python -m fts.quantize",
+    "commit": "e47011f37ab925ba66d7ec4d0929b0cb53712ae4",
+    "seed": 2
+  }
+}

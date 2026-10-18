@@ -132,8 +132,11 @@ def section_quant(r: Path) -> list[str]:
     qz = load(r, "quantization.json")
     if qz is not None:
         files = qz["files"]
+        lq = qz.get("llama_quantize") or {}
+        quant_bpw = lq.get("quant_bpw") or (lq.get("reported_bpw") or [None])[-1]
+        reported = f"; llama-quantize reports {quant_bpw:.2f} BPW" if quant_bpw else ""
         lines += [f"Q4_K_M file: {files['gguf-q4_k_m']['size_bytes']} bytes, {files['gguf-q4_k_m']['bits_per_weight_from_size']:.2f} bits per weight by size "
-                  f"(F16: {files['gguf-f16']['bits_per_weight_from_size']:.2f}).", "", stamp_line("quantization.json", qz), ""]
+                  f"(F16: {files['gguf-f16']['bits_per_weight_from_size']:.2f}){reported}.", "", stamp_line("quantization.json", qz), ""]
     lines.append(stamp_line("quant_quality.json", q))
     return lines
 

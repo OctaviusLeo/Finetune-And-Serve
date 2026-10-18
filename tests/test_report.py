@@ -77,3 +77,16 @@ def test_main_writes_summary_and_plots(tmp_path, monkeypatch):
 def test_formatters():
     assert report.f1(0.88123) == "0.8812" and report.ms(1539.6) == "1540" and report.tps(12.34) == "12.3" and report.usd(0.43184) == "0.4318"
     assert report.ci({"point": 0.5, "lower": 0.4, "upper": 0.6}) == "0.5000 [0.4000, 0.6000]"
+
+
+def test_quantization_line_shows_llama_quantize_bpw(tmp_path):
+    import json
+
+    results = write_results(tmp_path / "results")
+    q = json.loads((results / "quantization.json").read_text(encoding="utf-8"))
+    q["llama_quantize"] = {"reported_bpw": [16.0, 5.08]}
+    (results / "quantization.json").write_text(json.dumps(q), encoding="utf-8")
+    assert "llama-quantize reports 5.08 BPW" in report.render_results_table(results)
+    q["llama_quantize"] = {"quant_bpw": 5.07, "reported_bpw": [16.0, 5.08]}
+    (results / "quantization.json").write_text(json.dumps(q), encoding="utf-8")
+    assert "llama-quantize reports 5.07 BPW" in report.render_results_table(results)
