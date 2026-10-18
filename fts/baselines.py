@@ -17,7 +17,6 @@ three exist, the combined results/baselines.json.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 import time
@@ -26,7 +25,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from fts import data, exemplars, infer, prompts, repro, settings
-from fts.eval_core import BootstrapCI, bootstrap_ci
+from fts.eval_core import BootstrapCI, bootstrap_ci, split_digest
 from fts.infer import Prediction
 from fts.spend import SpendCapExceeded, SpendLedger
 
@@ -59,11 +58,6 @@ class BaselineResult:
         return d
 
 
-def test_ids_sha256(examples: Sequence[data.Example]) -> str:
-    """Digest of the Test ids in dataset order, so results on the same Test_Split can be matched."""
-    return hashlib.sha256("\n".join(e.example_id for e in examples).encode("utf-8")).hexdigest()
-
-
 def templates_for(name: str) -> str:
     if name == "base_zero_shot":
         return prompts.template_path("system") + ", " + prompts.template_path("zero_shot")
@@ -83,7 +77,7 @@ def evaluate(name: str, test: Sequence[data.Example], preds: Sequence[Prediction
         not_scored=len(report.not_scored),
         scored=len(report.scores),
         n_test=len(test),
-        test_ids_sha256=test_ids_sha256(test),
+        test_ids_sha256=split_digest(test),
         predictions_path=predictions_path,
         not_scored_examples=report.not_scored,
         details=details or {},

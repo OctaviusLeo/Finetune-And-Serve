@@ -61,7 +61,7 @@ def test_run_baselines_records_templates_spend_and_shared_test_ids(tmp_path):
     )
     assert [r.name for r in results] == list(baselines.NAMES)
     assert all(r.metric.point == 1.0 and r.not_scored == 0 and r.scored == 3 for r in results)
-    assert len({r.test_ids_sha256 for r in results}) == 1 and results[0].test_ids_sha256 == baselines.test_ids_sha256(TEST)
+    assert len({r.test_ids_sha256 for r in results}) == 1 and results[0].test_ids_sha256 == baselines.split_digest(TEST)
     assert results[0].prompt_template == "config/prompts/system.txt, config/prompts/zero_shot.txt"
     assert "config/prompts/few_shot.txt" in results[1].prompt_template and "config/few_shot_exemplars.json" in results[2].prompt_template
     assert results[0].spend_usd == 0.0 and results[2].spend_usd == pytest.approx(3 * (1000 * 0.125 + 20 * 0.5) / 1e6)
