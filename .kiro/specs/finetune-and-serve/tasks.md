@@ -238,7 +238,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Test the spend-cap stop path, that each result records its template, and that local and hosted results share the same Test ids, with fakes for inference and HTTP.
   - _Requirements: 3.4, 3.6_
 
-- [ ] 2.13 Run the baselines
+- [x] 2.13 Run the baselines
   - Commit and check the GPU is free. Then run, detached and one after another: the two local baselines, then the hosted baseline. Write `results/baselines.json` (stamped) with each metric, CI, template path, not-scored count, and the hosted spend versus the cap.
   - _Requirements: 3.1, 3.2, 3.3, 0.1_
 

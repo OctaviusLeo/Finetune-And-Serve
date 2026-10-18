@@ -1,0 +1,43 @@
+{
+  "details": {
+    "configured_model": "jev-1.13.0",
+    "engine": "TypeSafe Jev over HTTP: intent choice plus one slot-type choice per candidate span, assembled in code",
+    "input_tokens": 43982458,
+    "ledger": {
+      "completion_price_per_mtok": 0.0,
+      "completion_tokens": 39250179,
+      "prompt_price_per_mtok": 0.042,
+      "prompt_tokens": 44550049,
+      "requests": 3029,
+      "spend_cap_usd": 2.0,
+      "spend_usd": 1.8711020580000002
+    },
+    "max_span_tokens": 6,
+    "output_tokens": 39070611,
+    "questions": 82100,
+    "requests": 2989,
+    "response_models": [
+      "jev-1.13.0"
+    ],
+    "seconds_this_session": 491.1
+  },
+  "metric": {
+    "lower": 0.6745171403728902,
+    "point": 0.6872063657033395,
+    "upper": 0.6996190978378267
+  },
+  "n_test": 2974,
+  "name": "hosted_few_shot",
+  "not_scored": 0,
+  "not_scored_examples": [],
+  "predictions_path": "runs/predictions/hosted_few_shot.jsonl",
+  "prompt_template": "config/prompts/jev.yaml, config/labels.json, config/few_shot_exemplars.json",
+  "scored": 2974,
+  "spend_usd": 1.862371602,
+  "stamp": {
+    "command": "python -m fts.baselines --baseline hosted_few_shot",
+    "commit": "93cd217aa7743b458b9c3da497791e4633f56386",
+    "seed": 0
+  },
+  "test_ids_sha256": "9b9dde5ca8f356893a4c513fe1cccb1c23d7a8b373d44497bef7c46dec54c835"
+}
