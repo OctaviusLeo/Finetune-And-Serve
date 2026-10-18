@@ -369,7 +369,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Each level is stamped with command, seed, concurrency, and 40-character commit hash.
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
 
-- [ ] 5.7 Write property and unit tests for the load test
+- [x] 5.7 Write property and unit tests for the load test
   - **Property 9: Load-test latency percentile ordering and failed-request exclusion** — `p50 <= p95`, percentiles over successes only, failed count correct.
   - Unit tests: the sustaining criterion and the maximum-concurrency rule on fixed fixtures, and that the runner is non-interactive and stamps command, seed, concurrency, and commit.
   - **Validates: Requirements 7.1, 7.5** _Requirements: 7.3, 7.4, 7.6_
