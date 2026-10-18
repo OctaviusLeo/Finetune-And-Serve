@@ -64,6 +64,23 @@ class DryRunResult:
     total_params: int = 0
     losses: list[float] = field(default_factory=list)
     seconds: float = 0.0
+    idle_mib: int | None = None  # memory other programs held before the run (runs/gpu_idle_mib.txt)
+
+
+def headroom_line(result: DryRunResult) -> str:
+    """How the torch peak compares with the memory left after other programs (informational)."""
+    if result.idle_mib is None:
+        return "- Other programs' GPU memory before the run: not recorded (no runs/gpu_idle_mib.txt)"
+    combined = int(round(result.peak_reserved_mib)) + result.idle_mib
+    verdict = (
+        "fits in dedicated VRAM"
+        if combined <= result.total_mib
+        else "exceeds dedicated VRAM; under WSL2 the excess is served from shared system memory, which slows the job but does not fail it"
+    )
+    return (
+        f"- Other programs held {result.idle_mib} MiB before the run (`runs/gpu_idle_mib.txt`); torch peak reserved + that = "
+        f"{combined} MiB vs total {result.total_mib} MiB: {verdict}"
+    )
 
 
 def config_from_settings(model: settings.ModelSettings, train: settings.TrainSettings) -> DryRunConfig:
@@ -227,6 +244,7 @@ def render_dry_run_section(cfg: DryRunConfig, result: DryRunResult, stamp: repro
         f"- Peak GPU memory, `torch.cuda.max_memory_reserved()`: **{result.peak_reserved_mib:.0f} MiB**",
         f"- Peak GPU memory, `nvidia-smi` sampled once per second (whole GPU): **{result.peak_smi_mib} MiB**",
         f"- `nvidia-smi` total: **{result.total_mib} MiB**",
+        headroom_line(result),
         f"- Wall time: {result.seconds:.1f} s",
         *envdoc.stamp_lines(stamp),
     ]
@@ -276,6 +294,9 @@ def main(argv: list[str] | None = None, env_md: Path = envdoc.ENVIRONMENT_MD, re
     envdoc.replace_section(MACHINE_SECTION, render_machine_section(smi_text, stamp), env_md)
     print(f"Dry_Run: {cfg.model_name}@{cfg.revision}, batch {cfg.per_device_batch_size}, seq {cfg.max_seq_len}", flush=True)
     result = run(cfg)
+    idle_file = REPO_ROOT / "runs" / "gpu_idle_mib.txt"
+    if idle_file.exists():
+        result.idle_mib = gpu.read_idle_mib(idle_file)
     envdoc.replace_section(DRY_RUN_SECTION, render_dry_run_section(cfg, result, stamp), env_md)
     repro.write_json(result_json, result_payload(cfg, result), stamp)
     print(

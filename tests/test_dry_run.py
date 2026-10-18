@@ -140,6 +140,14 @@ def test_main_success_writes_evidence(tmp_path, monkeypatch):
     assert data["config"]["lora"]["target_modules"][0] == "q_proj"
 
 
+def test_headroom_line_cases():
+    assert "not recorded" in dry_run.headroom_line(dry_run.DryRunResult(ok=True))
+    fits = dry_run.DryRunResult(ok=True, peak_reserved_mib=5000.4, total_mib=10240, idle_mib=2410)
+    assert "7410 MiB vs total 10240 MiB: fits in dedicated VRAM" in dry_run.headroom_line(fits)
+    spills = dry_run.DryRunResult(ok=True, peak_reserved_mib=9326, total_mib=10240, idle_mib=2410)
+    assert "11736 MiB" in dry_run.headroom_line(spills) and "shared system memory" in dry_run.headroom_line(spills)
+
+
 def test_main_over_budget_exits_nonzero(tmp_path, monkeypatch, capsys):
     bad = dry_run.DryRunResult(ok=False, failure="VRAM over budget: nvidia-smi peak 11000 MiB > total 10240 MiB", total_mib=10240)
     _patch_main(monkeypatch, bad)
