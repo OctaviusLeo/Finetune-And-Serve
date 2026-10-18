@@ -1,0 +1,10 @@
+# Load_Test schedule and sustaining criterion (design.md "Load test schedule and sustaining criterion").
+variant: q4
+concurrency_levels: [1, 2, 4, 8, 16, 32]
+warmup_requests: 5
+timed_requests: 128
+max_tokens: 128
+timeout_s: 60
+seed: 0
+# A level is sustained when no request fails and P95 latency is at most this.
+p95_limit_ms: 2000

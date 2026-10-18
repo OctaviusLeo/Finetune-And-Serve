@@ -360,7 +360,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Write `results/quant_quality.json` (stamped) with both F1 values and CIs, the same seed's Hugging Face F1 for reference, and the peak serving VRAM versus the total.
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.6_
 
-- [ ] 5.6 Implement the load-test harness and runner
+- [x] 5.6 Implement the load-test harness and runner
   - `fts/loadtest.py` defines `LevelReport`, `LoadTestReport`, and `run_load_test`, and `scripts/loadtest.py` is the single-command entry point. They implement design.md's schedule (levels 1–32, warm-up, 128 timed requests per level, 60-second timeout) and its measures:
     - P50/P95 latency in ms over successes;
     - tokens/s;

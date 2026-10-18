@@ -1,307 +1,188 @@
-"""Load-test harness for the Serving_Endpoint (Req 6.6; task 5.4).
+"""Load test of the Serving_Endpoint (Req 7.1-7.6).
 
-Drives concurrent requests at the OpenAI-compatible Serving_Endpoint and reports
-P50/P95 latency, tokens/s, and the max sustained concurrency, counting
-failed/timed-out requests and EXCLUDING them from the latency/throughput stats
-while still reporting the failed count. Each report is stamped with the
-generating command, seed, concurrency level, and the full 40-character commit.
+Schedule (config/loadtest.yaml): concurrency levels 1, 2, 4, 8, 16, 32 against
+the Q4_K_M model on llama-server. At each level: 5 untimed warm-up requests,
+then 128 timed requests sent by ``concurrency`` worker threads. Prompts are Test
+utterances in the compact format drawn with ``random.Random(seed)``;
+``max_tokens`` 128, temperature 0, 60-second timeout, no client retries.
 
-Pure vs. driven
----------------
-:func:`summarize_outcomes` is a pure function (percentiles + failed exclusion)
-with no I/O, so Property 9 can exercise it directly. :func:`run_load_test`
-drives the concurrent requests through an injectable ``send`` callable (production
-passes a :class:`fts.model_client.ModelClient`-backed sender), so the harness is
-testable without a live server and never imports the heavy stack.
+Per level:
+* P50 and P95 latency in ms over successful requests (numpy linear percentiles);
+* tokens/s = completion tokens of successful requests / wall-clock time of the timed part;
+* failed requests (errors and timeouts), counted and excluded from both;
+* sustained = no failed request and P95 <= 2,000 ms.
+The maximum concurrency is the highest sustained level (0 if none). Every level
+is stamped with the command, seed, concurrency and 40-character commit.
 """
 
 from __future__ import annotations
 
-import argparse
-import json
+import random
+import time
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 
 import numpy as np
 
-from fts import repro
-
-COMMAND = "python -m fts.loadtest"
-
 
 @dataclass(frozen=True)
 class RequestOutcome:
-    """The result of a single load-test request.
-
-    ``ok`` is True for a successful request; failed/timed-out requests have
-    ``ok=False`` and are excluded from latency/throughput stats. ``latency_ms``
-    and ``completion_tokens`` are only meaningful when ``ok`` is True.
-    """
-
     ok: bool
     latency_ms: float
     completion_tokens: int
 
 
 @dataclass(frozen=True)
-class LoadTestReport:
-    """Immutable report for one load-test run at a fixed concurrency level.
-
-    Latency percentiles and tokens/s are computed over SUCCESSFUL requests only;
-    ``failed_requests`` is the count of failed/timed-out requests (excluded from
-    the stats). ``max_concurrent_requests`` is the max sustained concurrency
-    (see the sustaining criterion in :func:`run_load_test`). Stamped with the
-    generating ``command``, ``seed``, ``concurrency_level``, and the full
-    40-character ``commit``.
-    """
-
+class LevelStats:
     p50_latency_ms: float
     p95_latency_ms: float
     tokens_per_second: float
-    max_concurrent_requests: int
     failed_requests: int
-    seed: int
-    concurrency_level: int
-    command: str
-    commit: str
-
-    def __post_init__(self) -> None:
-        if len(self.commit) != 40:
-            raise ValueError(
-                f"commit must be a 40-character hash, got {len(self.commit)} chars"
-            )
-        if self.p50_latency_ms > self.p95_latency_ms:
-            raise ValueError("p50 latency must not exceed p95 latency")
+    successful_requests: int
 
 
 @dataclass(frozen=True)
-class _Stats:
-    """Pure latency/throughput summary over successful outcomes only."""
-
+class LevelReport:
+    concurrency_level: int
     p50_latency_ms: float
-    p95_latency_ms: float
+    p95_latency_ms: float  # p50 <= p95
     tokens_per_second: float
-    failed_requests: int
+    failed_requests: int  # excluded from latency and throughput
+    sustained: bool
+    successful_requests: int = 0
+    wall_seconds: float = 0.0
+    stamp: dict | None = None
 
 
-def summarize_outcomes(outcomes: Sequence[RequestOutcome]) -> _Stats:
-    """Compute P50/P95 latency and tokens/s over SUCCESSES only, with failed count.
+@dataclass(frozen=True)
+class LoadTestReport:
+    levels: tuple[LevelReport, ...]
+    max_concurrent_requests: int
+    seed: int
+    command: str
+    commit: str
 
-    Pure function (Property 9). Failed/timed-out outcomes are excluded from the
-    latency and throughput statistics but counted in ``failed_requests``. P50 is
-    the 50th and P95 the 95th percentile of successful latencies, so
-    ``p50 <= p95`` always holds. Tokens/s is total successful completion tokens
-    divided by total successful latency (seconds); it is ``0.0`` when there are
-    no successes or zero total latency. With no successful outcomes the
-    percentiles are ``0.0``.
-    """
-    successes = [o for o in outcomes if o.ok]
-    failed = sum(1 for o in outcomes if not o.ok)
-
-    if not successes:
-        return _Stats(
-            p50_latency_ms=0.0,
-            p95_latency_ms=0.0,
-            tokens_per_second=0.0,
-            failed_requests=failed,
-        )
-
-    latencies = np.asarray([o.latency_ms for o in successes], dtype=float)
-    p50 = float(np.percentile(latencies, 50))
-    p95 = float(np.percentile(latencies, 95))
-    # Numerical safety: percentile monotonicity guarantees p50 <= p95, but clamp
-    # to defend the LoadTestReport invariant against any float edge case.
-    if p50 > p95:
-        p50 = p95
-
-    total_tokens = sum(o.completion_tokens for o in successes)
-    total_seconds = float(latencies.sum()) / 1000.0
-    tokens_per_second = total_tokens / total_seconds if total_seconds > 0 else 0.0
-
-    return _Stats(
-        p50_latency_ms=p50,
-        p95_latency_ms=p95,
-        tokens_per_second=tokens_per_second,
-        failed_requests=failed,
-    )
+    def to_dict(self) -> dict:
+        return {"levels": [asdict(lv) for lv in self.levels], "max_concurrent_requests": self.max_concurrent_requests,
+                "seed": self.seed, "command": self.command, "commit": self.commit}
 
 
-#: A sender issues one request and returns its outcome. Injected so the harness
-#: is testable without a live server; production wraps a ModelClient.
-Sender = Callable[[int], RequestOutcome]
+def summarize(outcomes: Sequence[RequestOutcome], wall_seconds: float) -> LevelStats:
+    """Percentiles and throughput over successful requests only; failures counted separately."""
+    ok = [o for o in outcomes if o.ok]
+    failed = len(outcomes) - len(ok)
+    if not ok:
+        return LevelStats(0.0, 0.0, 0.0, failed, 0)
+    lat = np.asarray([o.latency_ms for o in ok], dtype=float)
+    p50, p95 = float(np.percentile(lat, 50)), float(np.percentile(lat, 95))
+    tps = sum(o.completion_tokens for o in ok) / wall_seconds if wall_seconds > 0 else 0.0
+    return LevelStats(min(p50, p95), p95, tps, failed, len(ok))
 
 
-def _run_concurrency_level(
-    send: Sender, concurrency: int, requests: int
-) -> list[RequestOutcome]:
-    """Issue ``requests`` requests at ``concurrency`` in parallel; collect outcomes."""
-    outcomes: list[RequestOutcome] = []
+def is_sustained(stats: LevelStats, p95_limit_ms: float) -> bool:
+    return stats.failed_requests == 0 and stats.successful_requests > 0 and stats.p95_latency_ms <= p95_limit_ms
+
+
+def max_sustained(levels: Sequence[LevelReport]) -> int:
+    return max((lv.concurrency_level for lv in levels if lv.sustained), default=0)
+
+
+def draw_prompts(utterances: Sequence[str], n: int, rng: random.Random) -> list[str]:
+    return [rng.choice(list(utterances)) for _ in range(n)]
+
+
+Sender = Callable[[str], RequestOutcome]
+
+
+def run_level(send: Sender, prompts: Sequence[str], concurrency: int, warmup: int) -> tuple[list[RequestOutcome], float]:
+    """Warm up sequentially, then send the timed prompts with ``concurrency`` workers; returns outcomes and wall time."""
+    for p in prompts[:warmup]:
+        send(p)
+    timed = prompts[warmup:]
+    start = time.perf_counter()
     with ThreadPoolExecutor(max_workers=concurrency) as pool:
-        futures = [pool.submit(send, i) for i in range(requests)]
-        for future in futures:
-            try:
-                outcomes.append(future.result())
-            except Exception:  # noqa: BLE001 - a raised sender counts as a failure
-                outcomes.append(
-                    RequestOutcome(ok=False, latency_ms=0.0, completion_tokens=0)
-                )
-    return outcomes
+        outcomes = list(pool.map(send, timed))
+    return outcomes, time.perf_counter() - start
 
 
-def run_load_test(
-    base_url: str,
-    model: str,
-    concurrency_levels: Sequence[int],
-    seed: int,
-    send: Sender | None = None,
-    requests_per_level: int = 50,
-    max_failure_rate: float = 0.05,
-) -> list[LoadTestReport]:
-    """Drive concurrent requests at the Serving_Endpoint and report per level.
-
-    For each level in ``concurrency_levels`` (ascending), issues
-    ``requests_per_level`` requests at that concurrency through ``send``,
-    summarizes successes-only latency/throughput via :func:`summarize_outcomes`,
-    and stamps the report with command/seed/concurrency/40-char commit.
-
-    Sustaining criterion for ``max_concurrent_requests``: a level is "sustained"
-    when its observed failure rate is at or below ``max_failure_rate`` (default
-    5%). ``max_concurrent_requests`` on each report is the highest sustained
-    level seen up to and including that level (``0`` if none sustained yet).
-
-    ``send`` is injected so this is testable without a live server; production
-    passes a sender backed by :class:`fts.model_client.ModelClient` against
-    ``base_url``/``model``. A missing ``send`` builds the live sender lazily.
-    """
-    if send is None:
-        send = _build_live_sender(base_url, model, seed)
-
-    commit = repro.commit_hash()
-    reports: list[LoadTestReport] = []
-    max_sustained = 0
-
-    for concurrency in sorted(concurrency_levels):
-        outcomes = _run_concurrency_level(send, concurrency, requests_per_level)
-        stats = summarize_outcomes(outcomes)
-
-        total = len(outcomes)
-        failure_rate = stats.failed_requests / total if total else 1.0
-        if failure_rate <= max_failure_rate:
-            max_sustained = max(max_sustained, concurrency)
-
-        reports.append(
-            LoadTestReport(
-                p50_latency_ms=stats.p50_latency_ms,
-                p95_latency_ms=stats.p95_latency_ms,
-                tokens_per_second=stats.tokens_per_second,
-                max_concurrent_requests=max_sustained,
-                failed_requests=stats.failed_requests,
-                seed=seed,
-                concurrency_level=concurrency,
-                command=COMMAND,
-                commit=commit,
-            )
-        )
-
-    return reports
+def run_load_test(send: Sender, utterances: Sequence[str], concurrency_levels: Sequence[int], seed: int, *, warmup: int, timed: int,
+                  p95_limit_ms: float, command: str, commit: str, log: Callable[[str], None] = lambda m: print(m, flush=True)) -> LoadTestReport:
+    rng = random.Random(seed)
+    levels = []
+    for c in concurrency_levels:
+        prompts = draw_prompts(utterances, warmup + timed, rng)
+        outcomes, wall = run_level(send, prompts, c, warmup)
+        stats = summarize(outcomes, wall)
+        report = LevelReport(c, stats.p50_latency_ms, stats.p95_latency_ms, stats.tokens_per_second, stats.failed_requests,
+                             is_sustained(stats, p95_limit_ms), stats.successful_requests, round(wall, 3),
+                             {"command": command, "seed": seed, "concurrency": c, "commit": commit})
+        levels.append(report)
+        log(f"concurrency {c}: p50 {report.p50_latency_ms:.0f} ms, p95 {report.p95_latency_ms:.0f} ms, {report.tokens_per_second:.1f} tok/s, "
+            f"failed {report.failed_requests}, sustained {report.sustained}")
+    return LoadTestReport(tuple(levels), max_sustained(levels), seed, command, commit)
 
 
-def _build_live_sender(base_url: str, model: str, seed: int) -> Sender:
-    """Build a sender backed by :class:`fts.model_client.ModelClient`.
+def make_sender(client, build_messages: Callable[[str], list[dict]], max_tokens: int) -> Sender:
+    """One timed request through a shared ModelClient (httpx.Client is thread-safe); any client error is a failure."""
+    from fts.model_client import ModelClientError
 
-    GPU-free (httpx only) but a live-network seam; the owner wires the concrete
-    prompt at M2. Returns a callable that issues one request and times it,
-    reporting a failed outcome on any client error.
-    """
-    import time
-
-    from fts.model_client import ModelClient, ModelClientError
-
-    client = ModelClient(
-        base_url=base_url,
-        model=model,
-        api_key_env="",  # a local server needs no key; override at the call site
-        timeout_s=30.0,
-        seed=seed,
-    )
-
-    def send(_index: int) -> RequestOutcome:
+    def send(utterance: str) -> RequestOutcome:
         start = time.perf_counter()
         try:
-            completion = client.complete("You are a benchmark.", "ping")
+            c = client.complete(build_messages(utterance), max_tokens)
         except ModelClientError:
-            return RequestOutcome(ok=False, latency_ms=0.0, completion_tokens=0)
-        latency_ms = (time.perf_counter() - start) * 1000.0
-        return RequestOutcome(
-            ok=True,
-            latency_ms=latency_ms,
-            completion_tokens=completion.completion_tokens,
-        )
+            return RequestOutcome(False, (time.perf_counter() - start) * 1000, 0)
+        return RequestOutcome(True, (time.perf_counter() - start) * 1000, c.completion_tokens)
 
     return send
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog=COMMAND,
-        description=(
-            "Load-test the OpenAI-compatible Serving_Endpoint: reports P50/P95 "
-            "latency, tokens/s, and max sustained concurrency over SUCCESSFUL "
-            "requests only (failed/timed-out excluded but counted), each stamped "
-            "with command/seed/concurrency/commit."
-        ),
-    )
-    parser.add_argument(
-        "--base-url",
-        dest="base_url",
-        type=str,
-        default="http://127.0.0.1:8000",
-        help="Base URL of the Serving_Endpoint.",
-    )
-    parser.add_argument(
-        "--model", type=str, default="quantized-model-tbd", help="Served model name."
-    )
-    parser.add_argument(
-        "--concurrency",
-        type=int,
-        nargs="+",
-        default=[1, 2, 4],
-        help="One or more concurrency levels to drive (ascending).",
-    )
-    parser.add_argument(
-        "--requests-per-level",
-        dest="requests_per_level",
-        type=int,
-        default=50,
-        help="Number of requests issued at each concurrency level.",
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=0,
-        help="Integer seed stamped onto every reported number.",
-    )
-    return parser
+def main(argv: list[str] | None = None, root=None, serve_fn=None, stop_fn=None, client=None, vram_query=None) -> int:
+    """Single command: start the configured model, run the schedule while sampling VRAM, stop it, write results/loadtest.json."""
+    import argparse
+    import sys
+    from pathlib import Path
 
+    from fts import data, gpu, prompts, quant_quality, repro, settings
+    from fts.model_client import ClientConfig, ModelClient
+    from fts.vram_monitor import VramMonitor
 
-def main(argv: list[str] | None = None) -> int:
-    """CLI entry point. Runs non-interactively and exits 0 on success.
-
-    Issues the live load test against the Serving_Endpoint (lazy httpx sender)
-    and prints the stamped per-level reports as JSON.
-    """
-    args = build_parser().parse_args(argv)
-    reports = run_load_test(
-        base_url=args.base_url,
-        model=args.model,
-        concurrency_levels=args.concurrency,
-        seed=args.seed,
-        requests_per_level=args.requests_per_level,
-    )
-    print(json.dumps([asdict(r) for r in reports], indent=2, sort_keys=True))
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+    root = Path(root) if root is not None else Path(__file__).resolve().parent.parent
+    parser = argparse.ArgumentParser(prog="python scripts/loadtest.py", description="Load-test the Serving_Endpoint.")
+    parser.parse_args(argv)
+    cfg = settings.load_yaml(root / "config" / "loadtest.yaml")
+    stamp = repro.start_run(seed=int(cfg["seed"]))
+    serve_cfg = settings.load_yaml(root / "config" / "serve.yaml")
+    templates = prompts.load_templates(root / "config" / "prompts")
+    utterances = [e.inputs for e in data.load_splits(root / "data" / "massive_en").test]
+    serve_fn = serve_fn or (lambda v: quant_quality.serve(v, root))
+    stop_fn = stop_fn or (lambda: quant_quality.stop(root))
+    if client is None:
+        client = ModelClient(ClientConfig(base_url=serve_cfg["base_url"], model=serve_cfg["model"],
+                                          api_key_env=serve_cfg["api_key_env"] if serve_cfg.get("require_api_key") else None,
+                                          timeout_s=float(cfg["timeout_s"]), seed=int(serve_cfg["seed"]), temperature=float(serve_cfg["temperature"]),
+                                          max_tokens_field=serve_cfg["max_tokens_field"], max_attempts=1))
+    try:
+        serve_fn(cfg["variant"])
+    except RuntimeError as exc:
+        print(f"FAIL: {exc}", file=sys.stderr)
+        return 1
+    try:
+        with VramMonitor(root / "runs" / "vram" / "loadtest.csv", query=vram_query or gpu.query_memory) as mon, client:
+            send = make_sender(client, lambda u: prompts.finetune_messages(templates, u), int(cfg["max_tokens"]))
+            report = run_load_test(send, utterances, [int(c) for c in cfg["concurrency_levels"]], int(cfg["seed"]), warmup=int(cfg["warmup_requests"]),
+                                   timed=int(cfg["timed_requests"]), p95_limit_ms=float(cfg["p95_limit_ms"]), command=stamp.command, commit=stamp.commit)
+    finally:
+        stop_fn()
+    vram = mon.summary()
+    payload = report.to_dict() | {
+        "schedule": cfg,
+        "model_file": serve_cfg["models"][cfg["variant"]],
+        "server": f"llama-server {serve_cfg['llama_cpp_build']} (-np 32 -c 16384)",
+        "sustaining_criterion": f"no failed request and P95 <= {cfg['p95_limit_ms']} ms",
+        "vram": vram,
+    }
+    repro.write_json(root / "results" / "loadtest.json", payload, stamp)
+    print(f"maximum sustained concurrency {report.max_concurrent_requests}; peak VRAM {vram['peak_mib']} of {vram['total_mib']} MiB")
+    return 0 if vram["within_budget"] else 1
