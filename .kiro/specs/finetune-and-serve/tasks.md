@@ -203,7 +203,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - `fts/metric.py` defines `parse_prediction`, `score_example` (field-level F1 exactly as design.md defines it, range [0, 1], invalid output = 0), and `aggregate` (mean), with the range documented in the module.
   - _Requirements: 2.1_
 
-- [ ] 2.6 Write property and unit tests for the metric
+- [x] 2.6 Write property and unit tests for the metric
   - **Property 4: Task_Metric range and identity** — score in `[0,1]`, `1.0` for an equal intent and slot multiset, aggregate in `[0,1]`.
   - Unit tests: design.md's hand-computed example (F1 = 0.8) asserted within 1e-6; invalid JSON scores 0; duplicate slots counted with multiplicity.
   - **Validates: Requirements 2.1, 3.2, 5.1** _Requirements: 9.1, 9.5_
