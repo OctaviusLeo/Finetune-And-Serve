@@ -32,3 +32,8 @@ outputs/
 *.gguf
 *.bin
 *.pt
+
+# IDE steering files and agent working files are local, not part of the project
+.kiro/steering/
+.kiro/specs/*/.config.kiro
+.agents/
