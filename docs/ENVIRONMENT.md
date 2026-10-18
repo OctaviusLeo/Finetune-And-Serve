@@ -121,7 +121,14 @@ Required-by: finetune-and-serve, peft
 
 ## Hosted model and Spend_Cap
 
-Filled in at task 1.6.
+- Hosted_Model: TypeSafe Jev, model `jev-1.13.0` (pinned version) via `POST https://api.typesafe.ai/v1/systemone`; key read from `TYPESAFE_API_KEY`
+- API check: the response's `model` field was `jev-1.13.0`; P(yes) for the check question 0.98
+- Check tokens: 292 input, 21 output; cost $0.00001226
+- Prices (USD per 1M tokens, https://docs.typesafe.ai/models, accessed 2026-10-18): input 0.042, output 0.0 (output is free); the ledger charges input tokens at 0.042
+- **Spend_Cap: $2.00**; ledger `results/hosted_ledger.jsonl` total after the check: $0.00001226 over 1 request(s)
+- Command: `python scripts/hosted_check.py`
+- Seed: `0`
+- Commit: `23470e7f41fde69d0c9f36ac64368c094753f445`
 
 ## Determinism notes
 

@@ -1,0 +1,28 @@
+{
+  "check": {
+    "answer": 0.98,
+    "configured_model": "jev-1.13.0",
+    "cost_usd": 1.2264000000000002e-05,
+    "input_tokens": 292,
+    "output_tokens": 21,
+    "question": "Does `request` ask the voice assistant to set an alarm?",
+    "response_model": "jev-1.13.0",
+    "state": {
+      "request": "wake me up at seven am tomorrow"
+    }
+  },
+  "ledger": {
+    "completion_price_per_mtok": 0.0,
+    "completion_tokens": 21,
+    "prompt_price_per_mtok": 0.042,
+    "prompt_tokens": 292,
+    "requests": 1,
+    "spend_cap_usd": 2.0,
+    "spend_usd": 1.2264000000000002e-05
+  },
+  "stamp": {
+    "command": "python scripts/hosted_check.py",
+    "commit": "23470e7f41fde69d0c9f36ac64368c094753f445",
+    "seed": 0
+  }
+}
