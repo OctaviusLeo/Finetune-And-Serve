@@ -1,345 +1,258 @@
-"""Results_Table writer + plots (Req 10.1, 10.2; task 6.1).
+"""Results_Table and plots generated from results/*.json (Req 10.1, 10.2).
 
-:func:`write_results_table` renders ``results/summary.md`` — the ONLY source of
-the project's reported numbers:
+``write_results_table`` renders results/summary.md, the only place reported
+numbers are tabulated. Sections: data counts; baselines and the three final
+seeds plus their mean +/- standard deviation (Test F1 with 95% CI); the sweep
+(Validation F1); pre- versus post-quantization quality; error-analysis group
+counts; the load test per concurrency level with the maximum sustained level;
+hosted spend versus the Spend_Cap. Each section names its source file and that
+file's command, seed and 40-character commit. A missing source is shown as
+``_Missing: <path>_`` so the gate can flag it. Every number goes through the
+formatters below, which scripts/build_docs.py reuses, so the README shows the
+same strings the summary does.
 
-* one row per Baseline and the Finetuned_Model with its Test Task_Metric point
-  estimate and 95% confidence interval,
-* a pre/post-quantization quality row (both quality points with their CIs and
-  the point-estimate delta), and
-* a Load_Test block (P50/P95 latency, tokens/s, max sustained concurrency,
-  failed requests) per concurrency level.
-
-The matplotlib routines (:func:`write_loss_curve_plot`,
-:func:`write_sweep_quality_plot`) render the loss-curve and sweep/quality plots
-into ``results/``. matplotlib is imported with the non-interactive ``Agg``
-backend so plotting needs no display and no GPU. Every reported number carries
-its generating command, seed, and 40-character commit via :mod:`fts.repro`.
-
-Pure logic only — no heavy-ML imports. The quality/latency inputs are plain
-dataclasses produced by the eval/quant/loadtest features, so this module and its
-tests stay CPU-only.
+The plots (matplotlib, Agg backend) go to results/plots/: the training loss of
+the three final seeds, and Validation F1 per sweep config beside Test F1 with
+95% CIs per system.
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+import json
 from pathlib import Path
 
-from fts import repro
-from fts.eval_core import BootstrapCI
-
-#: Default output directory for the generated Results_Table and plots.
-DEFAULT_RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
-
-#: The generating command recorded in the summary provenance block.
-COMMAND = "python -m fts.report"
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SECTIONS = ("Data", "Test F1: baselines and fine-tuned seeds", "Sweep", "Quantization quality", "Error analysis", "Load test", "Hosted spend")
+PLOTS = ("loss_curves.png", "sweep_quality.png")
+SYSTEM_LABELS = {"base_zero_shot": "Base zero-shot", "base_few_shot": "Base few-shot", "hosted_few_shot": "Hosted few-shot (gpt-6-luna)"}
 
 
-@dataclass(frozen=True)
-class MetricRow:
-    """One reported quality row: a named model with its Task_Metric + 95% CI."""
-
-    name: str
-    metric: BootstrapCI
+def f1(x: float) -> str:
+    return f"{x:.4f}"
 
 
-@dataclass(frozen=True)
-class QuantQualityRow:
-    """Pre/post-quantization quality: both points with CIs and the point delta."""
-
-    finetuned: BootstrapCI
-    quantized: BootstrapCI
-
-    @property
-    def metric_delta(self) -> float:
-        """Quantized point minus Finetuned point (negative = quality loss)."""
-        return self.quantized.point - self.finetuned.point
+def ci(metric: dict) -> str:
+    return f"{f1(metric['point'])} [{f1(metric['lower'])}, {f1(metric['upper'])}]"
 
 
-@dataclass(frozen=True)
-class LoadTestRow:
-    """One Load_Test row at a fixed concurrency level (successes-only stats)."""
-
-    concurrency_level: int
-    p50_latency_ms: float
-    p95_latency_ms: float
-    tokens_per_second: float
-    max_concurrent_requests: int
-    failed_requests: int
+def ms(x: float) -> str:
+    return f"{x:.0f}"
 
 
-def _fmt(value: float) -> str:
-    """Format a float with a stable 4-decimal precision for the table."""
-    return f"{value:.4f}"
+def tps(x: float) -> str:
+    return f"{x:.1f}"
 
 
-def _ci_cell(ci: BootstrapCI) -> str:
-    """Render a point estimate with its 95% CI as ``point [lower, upper]``."""
-    return f"{_fmt(ci.point)} [{_fmt(ci.lower)}, {_fmt(ci.upper)}]"
+def usd(x: float) -> str:
+    return f"{x:.4f}"
 
 
-def render_results_table(
-    quality_rows: Sequence[MetricRow],
-    quant_quality: QuantQualityRow | None,
-    load_test_rows: Sequence[LoadTestRow],
-    seed: int,
-    command: str = COMMAND,
-) -> str:
-    """Render the Results_Table markdown (pure; no file I/O).
+def load(results_dir: Path, name: str) -> dict | None:
+    p = results_dir / name
+    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
 
-    Produces the baseline-vs-finetuned quality table (one row per model with a
-    95% CI column), the pre/post-quantization quality row, and the Load_Test
-    block, followed by a provenance block carrying the generating command, seed,
-    and 40-character commit. Kept pure so tests assert on the string directly.
-    """
-    stamp = repro.stamp(command=command, seed=seed)
-    lines: list[str] = []
-    lines.append("# Results Summary (generated)")
-    lines.append("")
-    lines.append(
-        "> Generated by `fts.report.write_results_table`. This file is the ONLY "
-        "source of the project's reported numbers; never hand-edit it. "
-        "Regenerate via the eval/report entry points."
-    )
-    lines.append("")
 
-    # Quality table: one row per Baseline and the Finetuned_Model.
-    lines.append("## Test Task_Metric (95% CI)")
-    lines.append("")
-    lines.append("| Model | Task_Metric | 95% CI |")
-    lines.append("|---|---|---|")
-    for row in quality_rows:
-        ci = row.metric
-        lines.append(
-            f"| {row.name} | {_fmt(ci.point)} | [{_fmt(ci.lower)}, {_fmt(ci.upper)}] |"
-        )
-    lines.append("")
+def stamp_line(source: str, payload: dict) -> str:
+    s = payload.get("stamp", {})
+    return f"Source `results/{source}`; command `{s.get('command')}`, seed `{s.get('seed')}`, commit `{s.get('commit')}`."
 
-    # Pre/post-quantization quality row.
-    lines.append("## Pre/Post-Quantization Quality")
-    lines.append("")
-    if quant_quality is None:
-        lines.append(
-            "_No quantization quality recorded (owner `[ME]` supplies the "
-            "Quantized_Model at M4; regenerate to populate)._"
-        )
+
+def missing(source: str) -> list[str]:
+    return [f"_Missing: results/{source}_"]
+
+
+def section_data(r: Path) -> list[str]:
+    d = load(r, "data_counts.json")
+    if d is None:
+        return missing("data_counts.json")
+    c = d["counts"]
+    return [
+        "| Split | Examples |", "| --- | --- |",
+        f"| Train | {c['train']} |", f"| Validation | {c['validation']} |", f"| Test | {c['test']} |",
+        "",
+        f"Excluded as malformed: {d['excluded']}. Overlapping example ids across splits: {d['overlap']['total']}. "
+        f"Utterance texts shared train/validation {d['shared_utterances']['train-validation']}, train/test {d['shared_utterances']['train-test']}, "
+        f"validation/test {d['shared_utterances']['validation-test']}.",
+        "", stamp_line("data_counts.json", d),
+    ]
+
+
+def section_test(r: Path) -> list[str]:
+    lines = ["| System | Prompt | Test F1 [95% CI] | Not scored |", "| --- | --- | --- | --- |"]
+    base, ft = load(r, "baselines.json"), load(r, "finetuned.json")
+    if base is None:
+        lines = missing("baselines.json") + [""] + lines
     else:
-        lines.append("| Stage | Task_Metric | 95% CI |")
-        lines.append("|---|---|---|")
-        lines.append(
-            f"| Finetuned_Model (pre-quant) | {_fmt(quant_quality.finetuned.point)} "
-            f"| [{_fmt(quant_quality.finetuned.lower)}, {_fmt(quant_quality.finetuned.upper)}] |"
-        )
-        lines.append(
-            f"| Quantized_Model (post-quant) | {_fmt(quant_quality.quantized.point)} "
-            f"| [{_fmt(quant_quality.quantized.lower)}, {_fmt(quant_quality.quantized.upper)}] |"
-        )
-        lines.append(
-            f"| Delta (post - pre) | {_fmt(quant_quality.metric_delta)} | — |"
-        )
-    lines.append("")
-
-    # Load_Test block.
-    lines.append("## Load_Test (successes-only latency/throughput)")
-    lines.append("")
-    if not load_test_rows:
-        lines.append(
-            "_No Load_Test recorded (owner `[ME]` sets the concurrency schedule "
-            "at M4; regenerate to populate)._"
-        )
+        for b in base["baselines"]:
+            prompt = "zero-shot" if b["name"] == "base_zero_shot" else "few-shot (10 exemplars)"
+            lines.append(f"| {SYSTEM_LABELS[b['name']]} | {prompt} | {ci(b['metric'])} | {b['not_scored']} |")
+    if ft is None:
+        lines += ["", *missing("finetuned.json")]
     else:
-        lines.append(
-            "| Concurrency | P50 (ms) | P95 (ms) | Tokens/s | "
-            "Max sustained concurrency | Failed requests |"
-        )
-        lines.append("|---|---|---|---|---|---|")
-        for lt in load_test_rows:
-            lines.append(
-                f"| {lt.concurrency_level} | {_fmt(lt.p50_latency_ms)} "
-                f"| {_fmt(lt.p95_latency_ms)} | {_fmt(lt.tokens_per_second)} "
-                f"| {lt.max_concurrent_requests} | {lt.failed_requests} |"
-            )
+        for s in ft["seeds"]:
+            lines.append(f"| Fine-tuned, seed {s['seed']} | compact | {ci(s['metric'])} | {s['not_scored']} |")
+        lines.append(f"| Fine-tuned, mean ± std over {len(ft['seeds'])} seeds | compact | {f1(ft['mean'])} ± {f1(ft['spread'])} | |")
     lines.append("")
-
-    # Provenance: every reported number traces to this command/seed/commit.
-    lines.append("## Provenance")
-    lines.append("")
-    lines.append(f"- command: `{stamp.command}`")
-    lines.append(f"- seed: `{stamp.seed}`")
-    lines.append(f"- commit: `{stamp.commit}`")
-    lines.append("")
-    return "\n".join(lines)
+    lines.append("Every system is scored on the same Test_Split with the same field-level F1; each uses its own recorded prompt template.")
+    if base is not None:
+        lines += ["", stamp_line("baselines.json", base)]
+    if ft is not None:
+        lines += ["", stamp_line("finetuned.json", ft)]
+    return lines
 
 
-def write_results_table(
-    quality_rows: Sequence[MetricRow],
-    quant_quality: QuantQualityRow | None,
-    load_test_rows: Sequence[LoadTestRow],
-    seed: int,
-    results_dir: Path | str = DEFAULT_RESULTS_DIR,
-    command: str = COMMAND,
-) -> Path:
-    """Write ``results/summary.md`` and return its path (Req 10.1, 10.2).
-
-    This is the only writer of the reported numbers. Overwrites any existing
-    file so regeneration is idempotent. The CI column is always present for
-    every quality metric (quality table rows and the pre/post-quant row).
-    """
-    out_dir = Path(results_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    content = render_results_table(
-        quality_rows, quant_quality, load_test_rows, seed=seed, command=command
-    )
-    summary_path = out_dir / "summary.md"
-    summary_path.write_text(content, encoding="utf-8")
-    return summary_path
+def section_sweep(r: Path) -> list[str]:
+    s = load(r, "sweep.json")
+    if s is None:
+        return missing("sweep.json")
+    lines = ["| Config | lora_r | lora_alpha | Learning rate | Validation F1 |", "| --- | --- | --- | --- | --- |"]
+    for c in s["configs"]:
+        mark = " (selected)" if c["name"] == s["selected"]["name"] else ""
+        lines.append(f"| {c['name']}{mark} | {c['lora_r']} | {c['lora_alpha']} | {c['learning_rate']:g} | {f1(s['val_metrics'][c['name']])} |")
+    lines += ["", f"Selection: {s['selection_rule']}. Rationale: `{s['rationale_path']}`."]
+    final = load(r, "final_runs.json")
+    if final is not None:
+        vals = ", ".join(f"seed {x['seed']} {f1(x['val_metric'])}" for x in final["runs"])
+        lines += ["", f"Final_Configuration Validation F1: {vals}; serving seed {final['serving_seed']}.", "", stamp_line("final_runs.json", final)]
+    lines += ["", stamp_line("sweep.json", s)]
+    return lines
 
 
-def write_loss_curve_plot(
-    loss_by_step: Mapping[int, float],
-    results_dir: Path | str = DEFAULT_RESULTS_DIR,
-    filename: str = "loss_curve.png",
-) -> Path:
-    """Render the training loss curve into ``results/`` and return its path.
+def section_quant(r: Path) -> list[str]:
+    q = load(r, "quant_quality.json")
+    if q is None:
+        return missing("quant_quality.json")
+    names = {"gguf-f16": "GGUF F16 (pre-quantization)", "gguf-q4_k_m": "GGUF Q4_K_M (4-bit nominal)"}
+    lines = ["| Model (llama-server) | Test F1 [95% CI] | Failed requests | Peak VRAM / total (MiB) |", "| --- | --- | --- | --- |"]
+    for v in q["variants"]:
+        lines.append(f"| {names[v['method']]} | {ci(v['metric'])} | {v['failed_requests']} | {v['vram']['peak_mib']} / {v['vram']['total_mib']} |")
+    ref = q["reference_hf"]
+    lines += ["", f"Reference: the same seed ({ref['seed']}) evaluated with Hugging Face transformers: {ci(ref['metric'])}. "
+                  "Numbers are compared only within one engine.", ""]
+    qz = load(r, "quantization.json")
+    if qz is not None:
+        files = qz["files"]
+        lines += [f"Q4_K_M file: {files['gguf-q4_k_m']['size_bytes']} bytes, {files['gguf-q4_k_m']['bits_per_weight_from_size']:.2f} bits per weight by size "
+                  f"(F16: {files['gguf-f16']['bits_per_weight_from_size']:.2f}).", "", stamp_line("quantization.json", qz), ""]
+    lines.append(stamp_line("quant_quality.json", q))
+    return lines
 
-    Uses the non-interactive ``Agg`` matplotlib backend so no display/GPU is
-    needed. ``loss_by_step`` maps a training step to its logged loss.
-    """
+
+def section_errors(r: Path) -> list[str]:
+    e = load(r, "error_analysis.json")
+    if e is None:
+        return missing("error_analysis.json")
+    lines = ["| Failure group | Count |", "| --- | --- |"]
+    lines += [f"| {g['group']} | {g['count']} |" for g in e["groups"]]
+    lines += [f"| **Total analyzed** | {e['analyzed']} |", "", f"Every Test failure (F1 < 1) of the serving seed ({e['seed']}) is assigned to the first matching group.",
+              "", stamp_line("error_analysis.json", e)]
+    return lines
+
+
+def section_load(r: Path) -> list[str]:
+    lt = load(r, "loadtest.json")
+    if lt is None:
+        return missing("loadtest.json")
+    lines = ["| Concurrency | P50 (ms) | P95 (ms) | Tokens/s | Failed | Sustained |", "| --- | --- | --- | --- | --- | --- |"]
+    for lv in lt["levels"]:
+        lines.append(f"| {lv['concurrency_level']} | {ms(lv['p50_latency_ms'])} | {ms(lv['p95_latency_ms'])} | {tps(lv['tokens_per_second'])} | "
+                     f"{lv['failed_requests']} | {'yes' if lv['sustained'] else 'no'} |")
+    lines += ["", f"Maximum sustained concurrency: **{lt['max_concurrent_requests']}** ({lt['sustaining_criterion']}). "
+                  f"Peak VRAM during the test: {lt['vram']['peak_mib']} of {lt['vram']['total_mib']} MiB.", "", stamp_line("loadtest.json", lt)]
+    return lines
+
+
+def section_spend(r: Path) -> list[str]:
+    base = load(r, "baselines.json")
+    if base is None:
+        return missing("baselines.json")
+    h = base["hosted_spend"]
+    return [f"Hosted few-shot baseline: ${usd(h['baseline_spend_usd'])}; hosted ledger total ${usd(h['ledger_total_usd'])} against the "
+            f"Spend_Cap of ${h['spend_cap_usd']:.2f} (prompt tokens charged at ${h['prompt_price_per_mtok']} and completion tokens at "
+            f"${h['completion_price_per_mtok']} per 1M tokens, an upper bound on the bill).", "", stamp_line("baselines.json", base)]
+
+
+RENDERERS = (section_data, section_test, section_sweep, section_quant, section_errors, section_load, section_spend)
+
+
+def render_results_table(results_dir: Path, stamp: dict | None = None) -> str:
+    out = ["# Results summary", "", "Generated by `python scripts/build_summary.py` from `results/*.json`; do not edit by hand."]
+    if stamp is not None:
+        out.append(f"This file: command `{stamp['command']}`, seed `{stamp['seed']}`, commit `{stamp['commit']}`.")
+    out.append("")
+    for title, render in zip(SECTIONS, RENDERERS):
+        out += [f"## {title}", "", *render(results_dir), ""]
+    return "\n".join(out).rstrip("\n") + "\n"
+
+
+def write_results_table(results_dir: Path | str, path: Path | str, stamp: dict | None = None) -> Path:
+    p = Path(path)
+    p.write_text(render_results_table(Path(results_dir), stamp), encoding="utf-8")
+    return p
+
+
+def plot_loss_curves(results_dir: Path, out: Path) -> Path | None:
+    final = load(results_dir, "final_runs.json")
+    if final is None:
+        return None
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    out_dir = Path(results_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    steps = sorted(loss_by_step)
-    losses = [loss_by_step[s] for s in steps]
-
-    fig, ax = plt.subplots()
-    ax.plot(steps, losses, marker="o")
-    ax.set_xlabel("Training step")
-    ax.set_ylabel("Loss")
-    ax.set_title("Training loss curve")
-    out_path = out_dir / filename
-    fig.savefig(out_path)
+    fig, ax = plt.subplots(figsize=(7, 4))
+    for run in final["runs"]:
+        steps, losses = zip(*run["loss_curve"])
+        ax.plot(steps, losses, label=f"seed {run['seed']}")
+    ax.set_xlabel("optimizer step")
+    ax.set_ylabel("training loss (JSON tokens)")
+    ax.set_title(f"LoRA training loss, config {final['final_config']['name']}")
+    ax.legend()
+    fig.tight_layout()
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=120)
     plt.close(fig)
-    return out_path
+    return out
 
 
-def write_sweep_quality_plot(
-    quality_by_config: Mapping[str, float],
-    results_dir: Path | str = DEFAULT_RESULTS_DIR,
-    filename: str = "sweep_quality.png",
-) -> Path:
-    """Render the sweep/quality plot into ``results/`` and return its path.
-
-    ``quality_by_config`` maps each swept configuration label to its Validation
-    Task_Metric. Uses the ``Agg`` backend (no display/GPU).
-    """
+def plot_sweep_quality(results_dir: Path, out: Path) -> Path | None:
+    sweep, base, ft = load(results_dir, "sweep.json"), load(results_dir, "baselines.json"), load(results_dir, "finetuned.json")
+    if sweep is None or base is None or ft is None:
+        return None
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    out_dir = Path(results_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    labels = list(quality_by_config)
-    values = [quality_by_config[label] for label in labels]
-
-    fig, ax = plt.subplots()
-    ax.bar(labels, values)
-    ax.set_xlabel("Configuration")
-    ax.set_ylabel("Validation Task_Metric")
-    ax.set_title("Sweep quality by configuration")
-    fig.autofmt_xdate(rotation=30)
-    out_path = out_dir / filename
-    fig.savefig(out_path)
+    fig, (left, right) = plt.subplots(1, 2, figsize=(11, 4), gridspec_kw={"width_ratios": [1, 2]})
+    names = [c["name"] for c in sweep["configs"]]
+    left.bar(names, [sweep["val_metrics"][n] for n in names], color="#4C72B0")
+    left.set_title("Sweep: Validation F1")
+    left.set_ylim(0, 1)
+    systems = [(SYSTEM_LABELS[b["name"]].replace(" (gpt-6-luna)", ""), b["metric"]) for b in base["baselines"]]
+    systems += [(f"fine-tuned s{s['seed']}", s["metric"]) for s in ft["seeds"]]
+    qq = load(results_dir, "quant_quality.json")
+    if qq is not None:
+        systems += [("served " + v["variant"].upper(), v["metric"]) for v in qq["variants"]]
+    points = [m["point"] for _, m in systems]
+    err = [[m["point"] - m["lower"] for _, m in systems], [m["upper"] - m["point"] for _, m in systems]]
+    right.bar(range(len(systems)), points, yerr=err, capsize=3, color="#55A868")
+    right.set_xticks(range(len(systems)), [n for n, _ in systems], rotation=30, ha="right")
+    right.set_title("Test F1 with 95% CI")
+    right.set_ylim(0, 1)
+    fig.tight_layout()
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=120)
     plt.close(fig)
-    return out_path
+    return out
 
 
-# ---------------------------------------------------------------------------
-# Single-command generation of the committed Results_Table + plots.
-#
-# Until the owner [ME] wires the real GPU training/eval Runs (M2-M4), the
-# reported numbers are DOCUMENTED PLACEHOLDER defaults behind this clean
-# function boundary (the TBD-sourced-from-generated-results convention): they
-# are produced by a repository command (`python -m fts.report`), so the README
-# and MODEL_CARD trace every number to this generated file rather than
-# hand-editing it. Re-run this command once the real eval/loadtest reports exist
-# to overwrite the file with measured values.
-# ---------------------------------------------------------------------------
+def main(argv: list[str] | None = None, root: Path = REPO_ROOT) -> int:
+    from fts import repro
 
-#: Documented placeholder quality rows (owner [ME] replaces with measured eval
-#: output at M3). Values are illustrative defaults, not measured results.
-_PLACEHOLDER_QUALITY = (
-    MetricRow("base-zero-shot", BootstrapCI(point=0.0, lower=0.0, upper=0.0)),
-    MetricRow("base-few-shot", BootstrapCI(point=0.0, lower=0.0, upper=0.0)),
-    MetricRow("hosted-few-shot", BootstrapCI(point=0.0, lower=0.0, upper=0.0)),
-    MetricRow("Finetuned_Model", BootstrapCI(point=0.0, lower=0.0, upper=0.0)),
-)
-
-#: Documented placeholder pre/post-quant quality (owner [ME] replaces at M4).
-_PLACEHOLDER_QUANT = QuantQualityRow(
-    finetuned=BootstrapCI(point=0.0, lower=0.0, upper=0.0),
-    quantized=BootstrapCI(point=0.0, lower=0.0, upper=0.0),
-)
-
-#: Documented placeholder Load_Test block (owner [ME] replaces at M4).
-_PLACEHOLDER_LOADTEST = (
-    LoadTestRow(
-        concurrency_level=0,
-        p50_latency_ms=0.0,
-        p95_latency_ms=0.0,
-        tokens_per_second=0.0,
-        max_concurrent_requests=0,
-        failed_requests=0,
-    ),
-)
-
-
-def generate_default_report(
-    results_dir: Path | str = DEFAULT_RESULTS_DIR, seed: int = 0
-) -> Path:
-    """Write the committed ``results/summary.md`` + both plots from defaults.
-
-    Produces the Results_Table (quality + pre/post-quant + Load_Test) and the
-    loss-curve and sweep/quality plots using documented PLACEHOLDER values so the
-    README/MODEL_CARD numbers trace to a generated file now. Returns the summary
-    path. Overwrite with measured values by re-running after the real Runs.
-    """
-    summary = write_results_table(
-        _PLACEHOLDER_QUALITY,
-        _PLACEHOLDER_QUANT,
-        _PLACEHOLDER_LOADTEST,
-        seed=seed,
-        results_dir=results_dir,
-    )
-    write_loss_curve_plot({0: 0.0}, results_dir=results_dir)
-    write_sweep_quality_plot({"cfg-tbd": 0.0}, results_dir=results_dir)
-    return summary
-
-
-def main(argv: list[str] | None = None) -> int:
-    """CLI entry point: regenerate ``results/summary.md`` + plots (exit 0)."""
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        prog=COMMAND,
-        description=(
-            "Regenerate the Results_Table (results/summary.md) and the "
-            "loss-curve + sweep/quality plots from the current (placeholder "
-            "until owner [ME] wires measured Runs) sources."
-        ),
-    )
-    parser.add_argument("--seed", type=int, default=0)
-    args = parser.parse_args(argv)
-    path = generate_default_report(seed=args.seed)
-    print(f"wrote {path}")
+    stamp = repro.start_run(seed=0)
+    results = root / "results"
+    write_results_table(results, results / "summary.md", repro.to_dict(stamp))
+    made = [p for p in (plot_loss_curves(results, results / "plots" / PLOTS[0]), plot_sweep_quality(results, results / "plots" / PLOTS[1])) if p]
+    print(f"wrote results/summary.md and {len(made)} plot(s)")
     return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

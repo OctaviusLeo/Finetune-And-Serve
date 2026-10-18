@@ -387,7 +387,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
 
 ## M5 — Results, Model_Card, README, tests, and CI
 
-- [ ] 6.1 Implement the Results_Table writer and the plots
+- [x] 6.1 Implement the Results_Table writer and the plots
   - Write `fts/report.py` and `scripts/build_summary.py`, which generate `results/summary.md` from `results/*.json` with every section design.md lists. They also generate the loss-curve plot (the three final seeds) and a sweep/quality plot (Validation F1 per config, and Test F1 with CIs per system) into `results/plots/`.
   - _Requirements: 10.1, 10.2_
 
