@@ -132,7 +132,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - If peak VRAM exceeds the total, a CUDA out-of-memory error occurs, or Python is older than 3.11, it reports the measured value and the limit or prerequisite, records the failing condition, and exits non-zero.
   - _Requirements: 1.1, 1.2, 1.3, 1.5, 1.8, 0.4_
 
-- [ ] 1.2 Write unit tests for the VRAM-budget decision and prerequisite check
+- [x] 1.2 Write unit tests for the VRAM-budget decision and prerequisite check
   - Test that a peak-versus-total comparison flags over-budget, that an out-of-memory error is reported with the limit, and that the Python-version guard reports and fails on < 3.11, with `nvidia-smi` and torch faked.
   - _Requirements: 1.2, 1.4, 1.5_
 
