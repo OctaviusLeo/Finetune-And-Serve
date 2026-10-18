@@ -338,7 +338,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
     - record both files (method, nominal bit width, the bits per weight reported by `llama-quantize`, image digest) in `results/quantization.json`.
   - _Requirements: 6.1_
 
-- [ ] 5.2 Write unit tests for the quantizer records
+- [x] 5.2 Write unit tests for the quantizer records
   - Test that `QuantizedModel` records method and bit width and that the Docker commands are built as design.md describes, with Docker faked.
   - _Requirements: 6.1_
 
