@@ -419,7 +419,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
     3. Switch back, then delete the branch with `git branch -D ci-fail-check` and `git push origin --delete ci-fail-check`. Never force-push and never rewrite history.
   - _Requirements: 9.2, 9.4_
 
-- [ ] 6.8 Generate the README and the Model_Card
+- [x] 6.8 Generate the README and the Model_Card
   - Write `docs/README.template.md`, `docs/MODEL_CARD.template.md`, and `scripts/build_docs.py`, which fills every number from generated files (writing `results/doc_facts.json` from the configs) and generates `README.md` and `MODEL_CARD.md`.
   - The README contains the architecture, the Results_Table with a CI per metric, both plots, the baseline-versus-finetuned comparison, the pre/post-quantization quality, the Load_Test results, design.md's known limitations, and the private-repository statement. It states the exact single command that:
     - runs the unit tests (`bash scripts/test_unit.sh`);
