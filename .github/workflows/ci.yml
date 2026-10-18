@@ -1,0 +1,27 @@
+# CI_Pipeline: CPU-only unit tests (with the per-module coverage rule) and the Smoke_Evaluation
+# on every push and pull request, on a GitHub-hosted runner. No GPU work and no secrets.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.1"
+          python-version: "3.12"
+      - name: Install the locked environment
+        run: uv sync --frozen
+      - name: Unit and property tests with coverage
+        run: bash scripts/test_unit.sh
+      - name: CPU Smoke_Evaluation
+        run: uv run --frozen python -m fts.smoke_eval
