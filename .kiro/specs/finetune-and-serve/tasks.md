@@ -212,7 +212,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - `fts/eval_core.py` defines `BootstrapCI` and `bootstrap_ci` (≥1000 resamples, 95% percentile interval, deterministic under a fixed seed).
   - _Requirements: 3.2, 5.1_
 
-- [ ] 2.8 Write property test for bootstrap CI bracketing and determinism
+- [x] 2.8 Write property test for bootstrap CI bracketing and determinism
   - **Property 5: Bootstrap CI brackets the point estimate** — `lower <= point <= upper`; same seed yields an identical interval within 1e-6.
   - **Validates: Requirements 3.2, 5.1, 5.7**
 
