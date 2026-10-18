@@ -314,7 +314,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - `fts/eval.py` (invocable as `python -m fts.eval --config ... --seed ...`) runs non-interactively from one command. It writes `results/finetuned.json`: each seed's Test F1 with its CI, and the mean and spread across seeds. It writes `results/error_analysis.json`: the group counts and examples. Both are stamped with command, seed, and 40-character commit hash.
   - _Requirements: 5.6, 0.1, 0.3_
 
-- [ ] 4.6 Write property test for determinism under fixed seed
+- [x] 4.6 Write property test for determinism under fixed seed
   - **Property 10: Determinism under fixed seed** — the splitter, transform, metric, bootstrap, and ledger give floats equal within 1e-6 and exact equality for ints/categoricals across two same-seed runs.
   - **Validates: Requirements 0.3, 5.7**
 
