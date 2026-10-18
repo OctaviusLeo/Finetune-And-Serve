@@ -50,6 +50,8 @@ class TrainSettings:
     warmup_ratio: float
     lr_scheduler: str
     lora_dropout: float
+    max_grad_norm: float
+    weight_decay: float
     target_modules: tuple[str, ...]
     gradient_checkpointing: bool
     logging_steps: int
@@ -81,6 +83,8 @@ def load_train_settings(path: Path | str = TRAIN_YAML) -> TrainSettings:
         warmup_ratio=float(d["warmup_ratio"]),
         lr_scheduler=d["lr_scheduler"],
         lora_dropout=float(d["lora_dropout"]),
+        max_grad_norm=float(d["max_grad_norm"]),
+        weight_decay=float(d["weight_decay"]),
         target_modules=tuple(d["target_modules"]),
         gradient_checkpointing=bool(d["gradient_checkpointing"]),
         logging_steps=int(d["logging_steps"]),

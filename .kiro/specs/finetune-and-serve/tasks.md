@@ -250,7 +250,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
 
 ## M2 — LoRA fine-tuning, sweep, and seeds
 
-- [ ] 3.1 Implement the LoRA trainer
+- [x] 3.1 Implement the LoRA trainer
   - `fts/train.py` defines `TrainConfig`, `RunRecord`, and `PEFTTrainer.train`, which fine-tunes the Base_Model with LoRA on bf16 weights using design.md's fixed settings and determinism settings. Loss is computed on the JSON tokens only. It logs the loss curve, saves only the final Adapter to `~/fts-artifacts/adapters/<run_id>/`, computes the Validation F1 with `fts/infer.py`, and writes `results/runs/<run_id>.json` with the full config, seed, and 40-character commit hash. It trains and selects on Train/Validation only and never touches the Test_Split.
   - _Requirements: 4.1, 4.2, 4.7_
 
