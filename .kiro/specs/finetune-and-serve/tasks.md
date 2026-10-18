@@ -115,7 +115,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - `fts/repro.py` provides the 40-character commit hash via `git rev-parse HEAD`; a check, run when a script starts and before it writes anything, that refuses to stamp a reported result when `git --no-optional-locks status --porcelain` shows changes outside `results/`, `runs/`, `docs/`, `README.md`, `MODEL_CARD.md`, and `.kiro/`; a `Stamp` struct carrying `{command, seed, commit}`; and a serializer used by every result-emitting script. These two read-only commands are the only Git commands run against this repository from WSL; tests may create throwaway repositories in a temporary directory.
   - _Requirements: 0.1, 0.2_
 
-- [ ] 0.3 Write unit tests for the reproducibility helper
+- [x] 0.3 Write unit tests for the reproducibility helper
   - Assert the commit hash is 40 hex chars, the dirty-tree refusal works (in a temporary repository), and the stamp round-trips through serialization.
   - _Requirements: 0.1_
 
