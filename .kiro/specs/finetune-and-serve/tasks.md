@@ -407,7 +407,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - `fts/smoke_eval.py` (invocable as `python -m fts.smoke_eval`) runs the transform, the splitter, and the Task_Metric end to end on a tiny fixed input in `tests/fixtures/`. It needs no GPU, model, or network, prints a deterministic result, and exits non-zero on any failure or mismatch.
   - _Requirements: 9.3_
 
-- [ ] 6.6 Write unit test for the smoke evaluation path
+- [x] 6.6 Write unit test for the smoke evaluation path
   - Test that it runs on CPU, produces the expected result, and fails on malformed input.
   - _Requirements: 9.3_
 
