@@ -146,3 +146,10 @@ Filled in at task 5.5.
 - Command: `python scripts/check_train_determinism.py`
 - Seed: `1`
 - Commit: `b7212565dd32fd119b0881d99d5d351d6facf4f9`
+
+## Determinism notes: evaluation
+
+- Evaluation re-run of B-seed2 on the Test_Split: **identical**; 0 prediction(s) differed; Test F1 0.850752 then 0.850752
+- Command: `python -m fts.eval --rerun-check`
+- Seed: `0`
+- Commit: `960b5357a4ee8f6fe9679a407c0fb997836f5078`

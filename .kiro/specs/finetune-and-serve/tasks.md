@@ -318,7 +318,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - **Property 10: Determinism under fixed seed** — the splitter, transform, metric, bootstrap, and ledger give floats equal within 1e-6 and exact equality for ints/categoricals across two same-seed runs.
   - **Validates: Requirements 0.3, 5.7**
 
-- [ ] 4.7 Run the evaluation and its determinism re-run
+- [x] 4.7 Run the evaluation and its determinism re-run
   - Commit, check the GPU is free, then run `python -m fts.eval` detached on all three seeds.
   - Re-run it for the serving seed. The predictions must be identical and the metrics equal within 1e-6. If any prediction differs, record the differing ids in `docs/ENVIRONMENT.md` as GPU-kernel nondeterminism (Req 0.3's exclusion) and require only the scoring of identical predictions to match.
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.7_

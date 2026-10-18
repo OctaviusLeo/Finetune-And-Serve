@@ -1,0 +1,59 @@
+{
+  "bootstrap_seed": 0,
+  "mean": 0.8502706962021017,
+  "n_test": 2974,
+  "prompt_template": "config/prompts/system.txt, config/prompts/finetune.txt",
+  "seeds": [
+    {
+      "metric": {
+        "lower": 0.8411016993355596,
+        "point": 0.8515788832702081,
+        "upper": 0.8607478959059323
+      },
+      "n_test": 2974,
+      "not_scored": 0,
+      "not_scored_examples": [],
+      "run_id": "B-seed1",
+      "scored": 2974,
+      "seed": 1,
+      "test_ids_sha256": "9b9dde5ca8f356893a4c513fe1cccb1c23d7a8b373d44497bef7c46dec54c835"
+    },
+    {
+      "metric": {
+        "lower": 0.8402061808400073,
+        "point": 0.8507515106876237,
+        "upper": 0.8603552450967548
+      },
+      "n_test": 2974,
+      "not_scored": 0,
+      "not_scored_examples": [],
+      "run_id": "B-seed2",
+      "scored": 2974,
+      "seed": 2,
+      "test_ids_sha256": "9b9dde5ca8f356893a4c513fe1cccb1c23d7a8b373d44497bef7c46dec54c835"
+    },
+    {
+      "metric": {
+        "lower": 0.8380675880478334,
+        "point": 0.8484816946484735,
+        "upper": 0.8579180695173465
+      },
+      "n_test": 2974,
+      "not_scored": 0,
+      "not_scored_examples": [],
+      "run_id": "B-seed3",
+      "scored": 2974,
+      "seed": 3,
+      "test_ids_sha256": "9b9dde5ca8f356893a4c513fe1cccb1c23d7a8b373d44497bef7c46dec54c835"
+    }
+  ],
+  "serving_seed": 2,
+  "spread": 0.0016035994720523228,
+  "spread_measure": "sample standard deviation across seeds",
+  "stamp": {
+    "command": "python -m fts.eval",
+    "commit": "4e37f1be3ac2763570c4003ee343d59076f9be41",
+    "seed": 0
+  },
+  "test_ids_sha256": "9b9dde5ca8f356893a4c513fe1cccb1c23d7a8b373d44497bef7c46dec54c835"
+}

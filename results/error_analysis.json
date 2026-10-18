@@ -1,0 +1,192 @@
+{
+  "analyzed": 860,
+  "available_failures": 860,
+  "examples": {
+    "extra_slot": [
+      {
+        "f1": 0.4,
+        "gold": "{\"intent\": \"datetime_convert\", \"slots\": [{\"type\": \"time_zone\", \"value\": \"g. m. t. plus five\"}]}",
+        "id": "50",
+        "prediction": "{\"intent\": \"datetime_convert\", \"slots\": [{\"type\": \"time_zone\", \"value\": \"g. m. t.\"}, {\"type\": \"time_offset\", \"value\": \"+5\"}]}",
+        "utterance": "olly tell me the time in g. m. t. plus five"
+      },
+      {
+        "f1": 0.6666666666666666,
+        "gold": "{\"intent\": \"general_joke\", \"slots\": []}",
+        "id": "122",
+        "prediction": "{\"intent\": \"general_joke\", \"slots\": [{\"type\": \"joke_type\", \"value\": \"giggle\"}]}",
+        "utterance": "send a giggle my way"
+      },
+      {
+        "f1": 0.8,
+        "gold": "{\"intent\": \"datetime_query\", \"slots\": [{\"type\": \"date\", \"value\": \"this year\"}]}",
+        "id": "310",
+        "prediction": "{\"intent\": \"datetime_query\", \"slots\": [{\"type\": \"event_name\", \"value\": \"new year's\"}, {\"type\": \"date\", \"value\": \"this year\"}]}",
+        "utterance": "what day is new year's eve this year"
+      },
+      {
+        "f1": 0.8,
+        "gold": "{\"intent\": \"play_music\", \"slots\": [{\"type\": \"artist_name\", \"value\": \"anirudh's\"}]}",
+        "id": "362",
+        "prediction": "{\"intent\": \"play_music\", \"slots\": [{\"type\": \"song_name\", \"value\": \"second song\"}, {\"type\": \"artist_name\", \"value\": \"anirudh's\"}]}",
+        "utterance": "play the second song from anirudh's song"
+      },
+      {
+        "f1": 0.28571428571428575,
+        "gold": "{\"intent\": \"news_query\", \"slots\": [{\"type\": \"media_type\", \"value\": \"b. b. c. poll\"}, {\"type\": \"news_topic\", \"value\": \"upcoming us elections\"}]}",
+        "id": "837",
+        "prediction": "{\"intent\": \"news_query\", \"slots\": [{\"type\": \"media_type\", \"value\": \"b. b. c.\"}, {\"type\": \"news_topic\", \"value\": \"predictions\"}, {\"type\": \"event_name\", \"value\": \"us elections\"}]}",
+        "utterance": "what are the b. b. c. poll predictions for the upcoming us elections"
+      }
+    ],
+    "invalid_output": [],
+    "missing_slot": [
+      {
+        "f1": 0.8571428571428571,
+        "gold": "{\"intent\": \"takeaway_order\", \"slots\": [{\"type\": \"food_type\", \"value\": \"sushi\"}, {\"type\": \"timeofday\", \"value\": \"tonight\"}, {\"type\": \"meal_type\", \"value\": \"dinner\"}]}",
+        "id": "89",
+        "prediction": "{\"intent\": \"takeaway_order\", \"slots\": [{\"type\": \"food_type\", \"value\": \"sushi\"}, {\"type\": \"timeofday\", \"value\": \"tonight\"}]}",
+        "utterance": "could you order sushi for tonight dinner"
+      },
+      {
+        "f1": 0.5,
+        "gold": "{\"intent\": \"weather_query\", \"slots\": [{\"type\": \"time\", \"value\": \"week's\"}]}",
+        "id": "100",
+        "prediction": "{\"intent\": \"weather_query\", \"slots\": [{\"type\": \"date\", \"value\": \"week's\"}]}",
+        "utterance": "what's the week's forecast"
+      },
+      {
+        "f1": 0.5,
+        "gold": "{\"intent\": \"play_music\", \"slots\": [{\"type\": \"playlist_name\", \"value\": \"rock list\"}]}",
+        "id": "220",
+        "prediction": "{\"intent\": \"play_music\", \"slots\": [{\"type\": \"music_genre\", \"value\": \"rock\"}]}",
+        "utterance": "play music from my rock list"
+      },
+      {
+        "f1": 0.5,
+        "gold": "{\"intent\": \"play_music\", \"slots\": [{\"type\": \"playlist_name\", \"value\": \"nirvana playlist\"}]}",
+        "id": "296",
+        "prediction": "{\"intent\": \"play_music\", \"slots\": [{\"type\": \"artist_name\", \"value\": \"nirvana\"}]}",
+        "utterance": "play a nirvana playlist"
+      },
+      {
+        "f1": 0.5,
+        "gold": "{\"intent\": \"play_music\", \"slots\": [{\"type\": \"song_name\", \"value\": \"weekend\"}]}",
+        "id": "473",
+        "prediction": "{\"intent\": \"play_music\", \"slots\": [{\"type\": \"music_descriptor\", \"value\": \"weekend\"}]}",
+        "utterance": "play the weekend"
+      }
+    ],
+    "wrong_intent": [
+      {
+        "f1": 0.0,
+        "gold": "{\"intent\": \"iot_hue_lightchange\", \"slots\": [{\"type\": \"color_type\", \"value\": \"pink\"}]}",
+        "id": "8",
+        "prediction": "{\"intent\": \"play_music\", \"slots\": [{\"type\": \"music_genre\", \"value\": \"pink\"}]}",
+        "utterance": "pink is all we need"
+      },
+      {
+        "f1": 0.0,
+        "gold": "{\"intent\": \"iot_hue_lighton\", \"slots\": []}",
+        "id": "14",
+        "prediction": "{\"intent\": \"general_quirky\", \"slots\": []}",
+        "utterance": "and the darkness has fallen"
+      },
+      {
+        "f1": 0.0,
+        "gold": "{\"intent\": \"iot_cleaning\", \"slots\": []}",
+        "id": "27",
+        "prediction": "{\"intent\": \"iot_hue_lightup\", \"slots\": []}",
+        "utterance": "it's dirty here make some noise"
+      },
+      {
+        "f1": 0.0,
+        "gold": "{\"intent\": \"general_quirky\", \"slots\": []}",
+        "id": "41",
+        "prediction": "{\"intent\": \"iot_hue_lightchange\", \"slots\": []}",
+        "utterance": "i want the status on my screen brightness"
+      },
+      {
+        "f1": 0.0,
+        "gold": "{\"intent\": \"news_query\", \"slots\": [{\"type\": \"news_topic\", \"value\": \"exchange rate of us dollar to pound sterling\"}]}",
+        "id": "281",
+        "prediction": "{\"intent\": \"qa_currency\", \"slots\": [{\"type\": \"currency_name\", \"value\": \"us dollar\"}, {\"type\": \"currency_name\", \"value\": \"pound sterling\"}]}",
+        "utterance": "what is the exchange rate of us dollar to pound sterling"
+      }
+    ],
+    "wrong_slot_value": [
+      {
+        "f1": 0.5,
+        "gold": "{\"intent\": \"datetime_query\", \"slots\": [{\"type\": \"date\", \"value\": \"first april\"}]}",
+        "id": "355",
+        "prediction": "{\"intent\": \"datetime_query\", \"slots\": [{\"type\": \"date\", \"value\": \"april\"}]}",
+        "utterance": "what day of the week is first april"
+      },
+      {
+        "f1": 0.5,
+        "gold": "{\"intent\": \"datetime_query\", \"slots\": [{\"type\": \"place_name\", \"value\": \"new york city\"}]}",
+        "id": "486",
+        "prediction": "{\"intent\": \"datetime_query\", \"slots\": [{\"type\": \"place_name\", \"value\": \"new york\"}]}",
+        "utterance": "what time is it in new york city"
+      },
+      {
+        "f1": 0.5,
+        "gold": "{\"intent\": \"play_music\", \"slots\": [{\"type\": \"playlist_name\", \"value\": \"jogging playlist\"}]}",
+        "id": "936",
+        "prediction": "{\"intent\": \"play_music\", \"slots\": [{\"type\": \"playlist_name\", \"value\": \"jogging\"}]}",
+        "utterance": "open up and play music from my jogging playlist"
+      },
+      {
+        "f1": 0.5,
+        "gold": "{\"intent\": \"play_music\", \"slots\": [{\"type\": \"playlist_name\", \"value\": \"summer jams playlist\"}]}",
+        "id": "1546",
+        "prediction": "{\"intent\": \"play_music\", \"slots\": [{\"type\": \"playlist_name\", \"value\": \"summer jams\"}]}",
+        "utterance": "play my summer jams playlist"
+      },
+      {
+        "f1": 0.5,
+        "gold": "{\"intent\": \"news_query\", \"slots\": [{\"type\": \"media_type\", \"value\": \"guardian\"}]}",
+        "id": "1636",
+        "prediction": "{\"intent\": \"news_query\", \"slots\": [{\"type\": \"media_type\", \"value\": \"the guardian\"}]}",
+        "utterance": "show me the latest news from the guardian"
+      }
+    ]
+  },
+  "groups": [
+    {
+      "count": 0,
+      "group": "invalid_output"
+    },
+    {
+      "count": 293,
+      "group": "wrong_intent"
+    },
+    {
+      "count": 267,
+      "group": "missing_slot"
+    },
+    {
+      "count": 188,
+      "group": "extra_slot"
+    },
+    {
+      "count": 112,
+      "group": "wrong_slot_value"
+    }
+  ],
+  "run_id": "B-seed2",
+  "seed": 2,
+  "stamp": {
+    "command": "python -m fts.eval",
+    "commit": "4e37f1be3ac2763570c4003ee343d59076f9be41",
+    "seed": 0
+  },
+  "taxonomy_order": [
+    "invalid_output",
+    "wrong_intent",
+    "missing_slot",
+    "extra_slot",
+    "wrong_slot_value"
+  ],
+  "test_ids_sha256": "9b9dde5ca8f356893a4c513fe1cccb1c23d7a8b373d44497bef7c46dec54c835"
+}
