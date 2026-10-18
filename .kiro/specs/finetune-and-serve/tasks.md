@@ -378,7 +378,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Commit and check the GPU is free. Serve `q4`, run `scripts/loadtest.py` detached while sampling VRAM, and write `results/loadtest.json` (stamped) with every level, the maximum sustained concurrency, and the peak VRAM versus the total.
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 6.4_
 
-- [ ] 5.9 **Automated gate (M4):** run `bash scripts/verify_m4.sh`, which runs `bash scripts/test_unit.sh` and the full `pytest` (including the `docker` serving test), and checks:
+- [x] 5.9 **Automated gate (M4):** run `bash scripts/verify_m4.sh`, which runs `bash scripts/test_unit.sh` and the full `pytest` (including the `docker` serving test), and checks:
   - `results/quantization.json` records both models with method and bit width;
   - `results/quant_quality.json` has F16 and Q4_K_M F1 values with CIs in [0, 1];
   - every peak serving VRAM is at or below the total;
