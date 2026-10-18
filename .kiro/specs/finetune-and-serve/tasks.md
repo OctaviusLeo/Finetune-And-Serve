@@ -273,7 +273,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Write `scripts/check_train_determinism.py`, which runs the Final_Configuration twice for 30 optimizer steps with the same seed and compares every logged loss value within 1e-6. On a mismatch it reports the values, the largest difference, and the nondeterministic kernels named by PyTorch's warn-only messages, and records them in `docs/ENVIRONMENT.md`. A mismatch with no named nondeterministic kernel exits non-zero.
   - _Requirements: 4.6, 0.3, 0.4_
 
-- [ ] 3.6 Run the sweep
+- [x] 3.6 Run the sweep
   - Commit, check the GPU is free, then run the sweep detached and poll it. Write `results/sweep.json` (stamped) with each config's Validation F1, the selected Final_Configuration, and the rationale path.
   - _Requirements: 4.3, 4.4, 0.1_
 

@@ -1,0 +1,81 @@
+{
+  "configs": [
+    {
+      "epochs": 2.0,
+      "grad_accum": 4,
+      "learning_rate": 0.0002,
+      "lora_alpha": 16,
+      "lora_r": 8,
+      "max_seq_len": 256,
+      "name": "A",
+      "per_device_batch_size": 4,
+      "seed": 1
+    },
+    {
+      "epochs": 2.0,
+      "grad_accum": 4,
+      "learning_rate": 0.0002,
+      "lora_alpha": 32,
+      "lora_r": 16,
+      "max_seq_len": 256,
+      "name": "B",
+      "per_device_batch_size": 4,
+      "seed": 1
+    },
+    {
+      "epochs": 2.0,
+      "grad_accum": 4,
+      "learning_rate": 0.0001,
+      "lora_alpha": 32,
+      "lora_r": 16,
+      "max_seq_len": 256,
+      "name": "C",
+      "per_device_batch_size": 4,
+      "seed": 1
+    }
+  ],
+  "rationale_path": "docs/SWEEP_RATIONALE.md",
+  "runs": {
+    "A": {
+      "commit": "2538faa3850db6c1902b6fcb4d9f44119879afd2",
+      "record": "results/runs/A-seed1.json",
+      "run_id": "A-seed1",
+      "val_metric": 0.839001958308402
+    },
+    "B": {
+      "commit": "2538faa3850db6c1902b6fcb4d9f44119879afd2",
+      "record": "results/runs/B-seed1.json",
+      "run_id": "B-seed1",
+      "val_metric": 0.8406935634186002
+    },
+    "C": {
+      "commit": "2538faa3850db6c1902b6fcb4d9f44119879afd2",
+      "record": "results/runs/C-seed1.json",
+      "run_id": "C-seed1",
+      "val_metric": 0.8340457132636179
+    }
+  },
+  "selected": {
+    "epochs": 2.0,
+    "grad_accum": 4,
+    "learning_rate": 0.0002,
+    "lora_alpha": 32,
+    "lora_r": 16,
+    "max_seq_len": 256,
+    "name": "B",
+    "per_device_batch_size": 4,
+    "seed": 1
+  },
+  "selected_val_metric": 0.8406935634186002,
+  "selection_rule": "highest Validation F1; ties go to the config listed first",
+  "stamp": {
+    "command": "python -m fts.sweep sweep",
+    "commit": "2538faa3850db6c1902b6fcb4d9f44119879afd2",
+    "seed": 1
+  },
+  "val_metrics": {
+    "A": 0.839001958308402,
+    "B": 0.8406935634186002,
+    "C": 0.8340457132636179
+  }
+}
