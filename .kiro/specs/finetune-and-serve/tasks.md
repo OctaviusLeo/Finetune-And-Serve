@@ -254,7 +254,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - `fts/train.py` defines `TrainConfig`, `RunRecord`, and `PEFTTrainer.train`, which fine-tunes the Base_Model with LoRA on bf16 weights using design.md's fixed settings and determinism settings. Loss is computed on the JSON tokens only. It logs the loss curve, saves only the final Adapter to `~/fts-artifacts/adapters/<run_id>/`, computes the Validation F1 with `fts/infer.py`, and writes `results/runs/<run_id>.json` with the full config, seed, and 40-character commit hash. It trains and selects on Train/Validation only and never touches the Test_Split.
   - _Requirements: 4.1, 4.2, 4.7_
 
-- [ ] 3.2 Write unit tests for Run recording and Test isolation
+- [x] 3.2 Write unit tests for Run recording and Test isolation
   - Test that a `RunRecord` captures the loss curve, config, seed, Validation metric, and a 40-char commit hash, and that the trainer never reads the Test_Split (injected splits whose Test accessor fails if touched), using a tiny random model on the CPU.
   - _Requirements: 4.2, 4.7_
 
