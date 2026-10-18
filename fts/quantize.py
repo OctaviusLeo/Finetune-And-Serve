@@ -84,17 +84,38 @@ def bits_per_weight(size_bytes: int, n_params: int) -> float:
     return size_bytes * 8 / n_params
 
 
-def merge_adapter(model_settings: settings.ModelSettings, adapter_dir: Path, out_dir: Path) -> int:
-    """Merge the Adapter into the bf16 Base_Model on the CPU and save model + tokenizer; returns the parameter count."""
+#: Base-model files copied unchanged next to the merged weights: merging changes weights only, and the
+#: llama.cpp conversion image's older transformers cannot read the tokenizer config transformers 5 writes.
+SNAPSHOT_FILES = ("config.json", "generation_config.json", "tokenizer.json", "tokenizer_config.json", "vocab.json", "merges.txt")
+
+
+def base_snapshot(model_settings: settings.ModelSettings) -> Path:
+    """Local path of the pinned Base_Model snapshot's config and tokenizer files (from the Hugging Face cache)."""
+    from huggingface_hub import snapshot_download
+
+    return Path(snapshot_download(model_settings.name, revision=model_settings.revision, allow_patterns=list(SNAPSHOT_FILES)))
+
+
+def merge_adapter(model_settings: settings.ModelSettings, adapter_dir: Path, out_dir: Path,
+                  snapshot: Callable[[settings.ModelSettings], Path] = base_snapshot) -> int:
+    """Merge the Adapter into the bf16 Base_Model on the CPU, save the weights, and copy the base config and tokenizer.
+
+    Returns the parameter count.
+    """
+    import shutil
+
     from peft import PeftModel
 
-    from fts.lora import load_base_model, load_tokenizer
+    from fts.lora import load_base_model
 
     base = load_base_model(model_settings.name, model_settings.revision, model_settings.dtype, "cpu")
     merged = PeftModel.from_pretrained(base, str(adapter_dir)).merge_and_unload()
     out_dir.mkdir(parents=True, exist_ok=True)
     merged.save_pretrained(str(out_dir), safe_serialization=True)
-    load_tokenizer(model_settings.name, model_settings.revision).save_pretrained(str(out_dir))
+    src = snapshot(model_settings)
+    for name in SNAPSHOT_FILES:
+        shutil.copyfile(src / name, out_dir / name)
+    (out_dir / "chat_template.jinja").unlink(missing_ok=True)  # the copied tokenizer_config.json carries the template
     return sum(p.numel() for p in merged.parameters())
 
 

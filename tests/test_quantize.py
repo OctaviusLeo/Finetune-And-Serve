@@ -132,12 +132,30 @@ def test_merge_adapter_merges_and_saves(tmp_path, monkeypatch):
             saved["adapter"] = path
             return Wrapped()
 
-    class Tok:
-        def save_pretrained(self, path):
-            saved["tok"] = path
+    def save_pretrained_writes(path, safe_serialization=True):
+        saved["model"] = path
+        Path(path, "chat_template.jinja").write_text("t", encoding="utf-8")
+        Path(path, "tokenizer_config.json").write_text("transformers-5 format", encoding="utf-8")
 
+    Merged.save_pretrained = staticmethod(lambda path, safe_serialization=True: save_pretrained_writes(path))
+    snap = tmp_path / "snapshot"
+    snap.mkdir()
+    for name in quantize.SNAPSHOT_FILES:
+        (snap / name).write_text(f"original {name}", encoding="utf-8")
     monkeypatch.setattr(peft, "PeftModel", FakePeft)
     monkeypatch.setattr(fts.lora, "load_base_model", lambda name, rev, dtype, device: "base")
-    monkeypatch.setattr(fts.lora, "load_tokenizer", lambda name, rev: Tok())
-    n = quantize.merge_adapter(settings.load_model_settings(), tmp_path / "adapter", tmp_path / "merged")
-    assert n == 17 and saved == {"adapter": str(tmp_path / "adapter"), "model": str(tmp_path / "merged"), "tok": str(tmp_path / "merged")}
+    n = quantize.merge_adapter(settings.load_model_settings(), tmp_path / "adapter", tmp_path / "merged", snapshot=lambda ms: snap)
+    assert n == 17 and saved == {"adapter": str(tmp_path / "adapter"), "model": str(tmp_path / "merged")}
+    for name in quantize.SNAPSHOT_FILES:
+        assert (tmp_path / "merged" / name).read_text(encoding="utf-8") == f"original {name}"
+    assert not (tmp_path / "merged" / "chat_template.jinja").exists()
+
+
+def test_base_snapshot_uses_the_pinned_revision(monkeypatch, tmp_path):
+    import huggingface_hub
+
+    calls = []
+    monkeypatch.setattr(huggingface_hub, "snapshot_download", lambda name, revision, allow_patterns: calls.append((name, revision, allow_patterns)) or str(tmp_path))
+    ms = settings.load_model_settings()
+    assert quantize.base_snapshot(ms) == tmp_path
+    assert calls == [(ms.name, ms.revision, list(quantize.SNAPSHOT_FILES))]
