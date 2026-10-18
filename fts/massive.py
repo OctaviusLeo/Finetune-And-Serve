@@ -102,15 +102,19 @@ def next_power_of_two_above(n: int) -> int:
     return p
 
 
+def chat_token_ids(tok, messages: list[dict]) -> list[int]:
+    """Token ids of a chat; transformers 5 returns a mapping with ``input_ids``, older versions a list."""
+    out = tok.apply_chat_template(messages, tokenize=True)
+    if hasattr(out, "keys"):
+        out = out["input_ids"]
+    return list(out)
+
+
 def hf_token_counter(model: settings.ModelSettings) -> Callable[[list[dict]], int]:
     from fts.lora import load_tokenizer
 
     tok = load_tokenizer(model.name, model.revision)
-
-    def count(messages: list[dict]) -> int:
-        return len(tok.apply_chat_template(messages, tokenize=True))
-
-    return count
+    return lambda messages: len(chat_token_ids(tok, messages))
 
 
 def build(

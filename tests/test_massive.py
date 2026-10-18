@@ -120,3 +120,28 @@ def test_next_power_of_two_above():
     assert massive.next_power_of_two_above(256) == 512
     assert massive.next_power_of_two_above(300) == 512
     assert massive.next_power_of_two_above(100) == 128
+
+
+def test_chat_token_ids_handles_mapping_and_list():
+    class DictTok:
+        def apply_chat_template(self, messages, tokenize=True):
+            return {"input_ids": [1, 2, 3, 4], "attention_mask": [1, 1, 1, 1]}
+
+    class ListTok:
+        def apply_chat_template(self, messages, tokenize=True):
+            return [5, 6]
+
+    assert massive.chat_token_ids(DictTok(), []) == [1, 2, 3, 4]
+    assert massive.chat_token_ids(ListTok(), []) == [5, 6]
+
+
+def test_hf_token_counter_counts_input_ids(monkeypatch):
+    import fts.lora
+
+    class DictTok:
+        def apply_chat_template(self, messages, tokenize=True):
+            return {"input_ids": list(range(7)), "attention_mask": [1] * 7}
+
+    monkeypatch.setattr(fts.lora, "load_tokenizer", lambda name, revision: DictTok())
+    count = massive.hf_token_counter(massive.settings.load_model_settings())
+    assert count([{"role": "user", "content": "x"}]) == 7
