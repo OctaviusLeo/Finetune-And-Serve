@@ -173,7 +173,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
 
 ## M1 — Task, data pipeline, metric, and baselines
 
-- [ ] 2.1 Implement the deterministic data pipeline and splitter
+- [x] 2.1 Implement the deterministic data pipeline and splitter
   - `fts/data.py` defines the `Example` and `Splits` dataclasses from design.md, plus:
     - `transform_example(raw, seed)`: parses MASSIVE `annot_utt` into the canonical JSON target; malformed records return `None`, and the caller reports the id, the reason, and the total excluded count.
     - `build_splits(examples, seed)`: assigns by the official partitions.

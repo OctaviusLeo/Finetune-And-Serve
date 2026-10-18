@@ -18,7 +18,7 @@ _example_id = st.from_regex(r"id-[0-9a-f]{1,8}", fullmatch=True)
 def _splits(draw):
     n = draw(st.integers(min_value=0, max_value=30))
     ids = draw(st.lists(_example_id, min_size=n, max_size=n, unique=True))
-    examples = [Example(example_id=i, inputs="in", target="out") for i in ids]
+    examples = [Example(example_id=i, partition="train", inputs="in", target="out") for i in ids]
     # Partition deterministically into train/val/test.
     n_train = len(examples) * 6 // 10
     n_val = len(examples) * 2 // 10

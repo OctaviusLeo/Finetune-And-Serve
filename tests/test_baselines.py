@@ -11,11 +11,11 @@ from fts.eval_core import bootstrap_ci
 
 def _splits() -> Splits:
     train = tuple(
-        Example(example_id=f"tr-{i}", inputs=f"in{i}", target=f'{{"n": {i}}}')
+        Example(example_id=f"tr-{i}", partition="train", inputs=f"in{i}", target=f'{{"n": {i}}}')
         for i in range(5)
     )
     test = tuple(
-        Example(example_id=f"te-{i}", inputs=f"in{i}", target=f'{{"n": {i}}}')
+        Example(example_id=f"te-{i}", partition="test", inputs=f"in{i}", target=f'{{"n": {i}}}')
         for i in range(4)
     )
     return Splits(train=train, validation=(), test=test)

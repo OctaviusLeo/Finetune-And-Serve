@@ -1,176 +1,235 @@
-"""Deterministic data pipeline: transform, split, and overlap check (Req 2.3-2.7).
+"""Deterministic MASSIVE data pipeline: transform, official splits, overlap check (Req 2.3-2.7).
 
-Pure logic, no heavy-ML imports. ``transform_example`` is deterministic and
-returns ``None`` for malformed input while reporting the id and reason;
-``build_splits`` produces reproducible seeded membership; ``check_overlap``
-reports any example id shared across splits. Each split's example count is a
-Measured_Value (see :func:`split_counts`).
+Each MASSIVE 1.1 record has ``id``, ``partition`` (``train``, ``dev`` or ``test``),
+``intent`` and ``utt``, plus ``annot_utt`` in which slots are marked
+``[label : entity]``. :func:`transform_example` turns one record into an
+:class:`Example` whose target is the canonical JSON
+
+    {"intent": "alarm_set", "slots": [{"type": "time", "value": "five am"}]}
+
+serialized with ``json.dumps(obj, ensure_ascii=False)``, so the same raw record
+always yields the same string. A record is excluded (``None``, with the reason
+available from :func:`transform_with_reason`) when a required field is missing,
+the intent is empty, the brackets do not balance, a span lacks ``" : "``, or
+removing the markup does not reproduce ``utt`` after collapsing whitespace.
+
+Splits are MASSIVE's official partitions (``train`` -> Train, ``dev`` ->
+Validation, ``test`` -> Test), so membership does not depend on the seed; the
+seed is accepted and recorded for uniformity. No step here uses randomness.
 """
 
 from __future__ import annotations
 
-import hashlib
-import random
+import json
+import re
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
+
+PARTITION_TO_SPLIT = {"train": "train", "dev": "validation", "test": "test"}
+SPLIT_NAMES = ("train", "validation", "test")
+REQUIRED_FIELDS = ("id", "partition", "intent", "utt", "annot_utt")
+_WS = re.compile(r"\s+")
 
 
 @dataclass(frozen=True)
 class Example:
-    """A single transformed training/eval example."""
-
-    example_id: str
-    inputs: str
-    target: str
+    example_id: str  # MASSIVE id; stable identifier for overlap checks and reporting
+    partition: str  # "train" | "dev" | "test" (official MASSIVE partition)
+    inputs: str  # the utterance (utt)
+    target: str  # canonical gold JSON string
 
 
 @dataclass(frozen=True)
 class Splits:
-    """Train / Validation / Test partition of :class:`Example` objects."""
-
     train: tuple[Example, ...]
     validation: tuple[Example, ...]
     test: tuple[Example, ...]
 
+    def by_name(self, name: str) -> tuple[Example, ...]:
+        return {"train": self.train, "validation": self.validation, "test": self.test}[name]
+
 
 @dataclass(frozen=True)
 class Exclusion:
-    """Record of a malformed raw record excluded by :func:`transform_example`."""
-
     example_id: str
     reason: str
 
 
 @dataclass
 class TransformReport:
-    """Diagnostics collected while transforming a batch of raw records."""
-
     examples: list[Example] = field(default_factory=list)
     exclusions: list[Exclusion] = field(default_factory=list)
 
     @property
     def excluded_count(self) -> int:
-        """Total number of malformed records excluded."""
         return len(self.exclusions)
 
 
-def transform_example(raw: dict, seed: int) -> Example | None:
-    """Deterministically transform one raw record into an :class:`Example`.
+class MalformedRecord(ValueError):
+    """Raised by :func:`parse_annotation` with the reason a record is excluded."""
 
-    Returns ``None`` for malformed input. A record is malformed when it is not
-    a mapping, is missing a non-empty ``id``/``inputs``/``target`` field, or any
-    of those fields is not a string. The transform is pure and deterministic:
-    the same ``raw`` and ``seed`` always yield the same result. ``seed`` is
-    accepted for interface symmetry with the rest of the pipeline; the transform
-    itself does not use randomness, so exclusion is deterministic too.
-    """
+
+def collapse_ws(text: str) -> str:
+    return _WS.sub(" ", text).strip()
+
+
+def parse_annotation(annot_utt: str) -> tuple[list[tuple[str, str]], str]:
+    """Return the ``(label, value)`` spans in order and the text with the markup removed."""
+    slots: list[tuple[str, str]] = []
+    plain: list[str] = []
+    i = 0
+    while i < len(annot_utt):
+        ch = annot_utt[i]
+        if ch == "[":
+            end = annot_utt.find("]", i + 1)
+            if end == -1 or "[" in annot_utt[i + 1 : end]:
+                raise MalformedRecord("unbalanced brackets")
+            inner = annot_utt[i + 1 : end]
+            if " : " not in inner:
+                raise MalformedRecord("slot span lacks ' : '")
+            label, value = (part.strip() for part in inner.split(" : ", 1))
+            if not label or not value:
+                raise MalformedRecord("empty slot label or value")
+            slots.append((label, value))
+            plain.append(value)
+            i = end + 1
+        elif ch == "]":
+            raise MalformedRecord("unbalanced brackets")
+        else:
+            plain.append(ch)
+            i += 1
+    return slots, collapse_ws("".join(plain))
+
+
+def canonical_target(intent: str, slots: Sequence[tuple[str, str]]) -> str:
+    obj = {"intent": intent, "slots": [{"type": t, "value": v} for t, v in slots]}
+    return json.dumps(obj, ensure_ascii=False)
+
+
+def transform_with_reason(raw: object) -> tuple[Example | None, str | None]:
+    """The Example, or None with the reason the record is excluded."""
     if not isinstance(raw, dict):
-        return None
+        return None, "record is not a JSON object"
+    for name in REQUIRED_FIELDS:
+        if not isinstance(raw.get(name), str):
+            return None, f"missing field {name}"
+    intent = raw["intent"].strip()
+    if not intent:
+        return None, "empty intent"
+    if raw["partition"] not in PARTITION_TO_SPLIT:
+        return None, f"unknown partition {raw['partition']!r}"
+    try:
+        slots, plain = parse_annotation(raw["annot_utt"])
+    except MalformedRecord as exc:
+        return None, str(exc)
+    utt = collapse_ws(raw["utt"])
+    if plain != utt:
+        return None, "annot_utt without markup does not reproduce utt"
+    return Example(example_id=raw["id"], partition=raw["partition"], inputs=utt, target=canonical_target(intent, slots)), None
 
-    example_id = raw.get("id")
-    inputs = raw.get("inputs")
-    target = raw.get("target")
 
-    if not isinstance(example_id, str) or not example_id:
-        return None
-    if not isinstance(inputs, str) or not inputs:
-        return None
-    if not isinstance(target, str):
-        return None
+def transform_example(raw: dict, seed: int) -> Example | None:
+    """Deterministic transform of one MASSIVE record; None for a malformed one (Req 2.5, 2.6).
 
-    return Example(
-        example_id=example_id,
-        inputs=inputs.strip(),
-        target=target.strip(),
-    )
-
-
-def transform_batch(raws: list[dict], seed: int) -> TransformReport:
-    """Transform a batch, collecting successes and malformed-record diagnostics.
-
-    Deterministic: identical input yields an identical report, including the
-    excluded count and the id+reason of every exclusion.
+    ``seed`` is part of the documented interface; the transform uses no randomness.
     """
+    del seed
+    return transform_with_reason(raw)[0]
+
+
+def transform_all(raws: Iterable[object], seed: int) -> TransformReport:
+    """Transform every record, collecting the examples and each exclusion's id and reason."""
+    del seed
     report = TransformReport()
     for index, raw in enumerate(raws):
-        example = transform_example(raw, seed)
+        example, reason = transform_with_reason(raw)
         if example is None:
-            raw_id = raw.get("id") if isinstance(raw, dict) else None
-            example_id = raw_id if isinstance(raw_id, str) and raw_id else f"<index:{index}>"
-            report.exclusions.append(
-                Exclusion(example_id=example_id, reason="malformed raw record")
-            )
+            rid = raw.get("id") if isinstance(raw, dict) else None
+            report.exclusions.append(Exclusion(rid if isinstance(rid, str) and rid else f"<line {index + 1}>", reason or "malformed"))
         else:
             report.examples.append(example)
     return report
 
 
-def _seeded_sort_key(example_id: str, seed: int) -> str:
-    """Deterministic shuffle key: hash of (seed, example_id)."""
-    digest = hashlib.sha256(f"{seed}:{example_id}".encode("utf-8")).hexdigest()
-    return digest
-
-
-def build_splits(
-    examples: list[Example],
-    seed: int,
-    ratios: tuple[float, float, float] = (0.8, 0.1, 0.1),
-) -> Splits:
-    """Partition ``examples`` into train/validation/test with reproducible membership.
-
-    Membership is a deterministic function of ``seed`` and each example's id:
-    examples are ordered by a seeded hash of their id (stable, independent of
-    input order) and then sliced by ``ratios``. The same ``examples`` (in any
-    order) and ``seed`` always produce the same membership.
-    """
-    train_r, val_r, test_r = ratios
-    if min(ratios) < 0 or sum(ratios) <= 0:
-        raise ValueError(f"invalid split ratios: {ratios!r}")
-
-    # Deduplicate by id (keep first occurrence) so membership is well defined.
-    unique: dict[str, Example] = {}
+def build_splits(examples: Sequence[Example], seed: int) -> Splits:
+    """Assign each Example to the split named by its official partition, keeping dataset order (Req 2.3)."""
+    del seed
+    buckets: dict[str, list[Example]] = {name: [] for name in SPLIT_NAMES}
     for ex in examples:
-        unique.setdefault(ex.example_id, ex)
+        if ex.partition not in PARTITION_TO_SPLIT:
+            raise ValueError(f"example {ex.example_id} has unknown partition {ex.partition!r}")
+        buckets[PARTITION_TO_SPLIT[ex.partition]].append(ex)
+    return Splits(train=tuple(buckets["train"]), validation=tuple(buckets["validation"]), test=tuple(buckets["test"]))
 
-    ordered = sorted(unique.values(), key=lambda ex: _seeded_sort_key(ex.example_id, seed))
 
-    n = len(ordered)
-    total = train_r + val_r + test_r
-    n_train = int(n * (train_r / total))
-    n_val = int(n * (val_r / total))
-
-    train = tuple(ordered[:n_train])
-    validation = tuple(ordered[n_train : n_train + n_val])
-    test = tuple(ordered[n_train + n_val :])
-    return Splits(train=train, validation=validation, test=test)
+def _pairs(splits: Splits) -> list[tuple[str, tuple[Example, ...], tuple[Example, ...]]]:
+    return [
+        ("train-validation", splits.train, splits.validation),
+        ("train-test", splits.train, splits.test),
+        ("validation-test", splits.validation, splits.test),
+    ]
 
 
 def check_overlap(splits: Splits) -> dict[str, list[str]]:
-    """Return the shared example ids per split pair; empty dict when disjoint.
-
-    Keys are ``"train-validation"``, ``"train-test"``, and
-    ``"validation-test"``. Only pairs with a non-empty intersection appear, each
-    mapping to the sorted list of shared ids.
-    """
-    train_ids = {ex.example_id for ex in splits.train}
-    val_ids = {ex.example_id for ex in splits.validation}
-    test_ids = {ex.example_id for ex in splits.test}
-
-    overlaps: dict[str, list[str]] = {}
-    pairs = (
-        ("train-validation", train_ids & val_ids),
-        ("train-test", train_ids & test_ids),
-        ("validation-test", val_ids & test_ids),
-    )
-    for name, shared in pairs:
+    """{pair: sorted overlapping example ids} for every split pair that shares an id; empty when disjoint."""
+    overlaps = {}
+    for name, a, b in _pairs(splits):
+        shared = {e.example_id for e in a} & {e.example_id for e in b}
         if shared:
             overlaps[name] = sorted(shared)
     return overlaps
 
 
+def overlap_total(overlaps: dict[str, list[str]]) -> int:
+    """Number of distinct example ids that appear in more than one split."""
+    return len({i for ids in overlaps.values() for i in ids})
+
+
+def shared_utterances(splits: Splits) -> dict[str, int]:
+    """Count of distinct utterance texts shared by each split pair (reported, not failed)."""
+    return {name: len({e.inputs for e in a} & {e.inputs for e in b}) for name, a, b in _pairs(splits)}
+
+
 def split_counts(splits: Splits) -> dict[str, int]:
-    """Return each split's example count as a Measured_Value mapping."""
-    return {
-        "train": len(splits.train),
-        "validation": len(splits.validation),
-        "test": len(splits.test),
-    }
+    return {name: len(splits.by_name(name)) for name in SPLIT_NAMES}
+
+
+def labels_from_train(train: Sequence[Example]) -> dict[str, list[str]]:
+    """Sorted intent and slot-type lists built from the Train_Split only."""
+    intents, slot_types = set(), set()
+    for ex in train:
+        obj = json.loads(ex.target)
+        intents.add(obj["intent"])
+        slot_types.update(s["type"] for s in obj["slots"])
+    return {"intents": sorted(intents), "slot_types": sorted(slot_types)}
+
+
+def write_splits(splits: Splits, directory: Path | str) -> dict[str, Path]:
+    """Write ``{train,validation,test}.jsonl`` with one Example per line."""
+    out_dir = Path(directory)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    paths = {}
+    for name in SPLIT_NAMES:
+        p = out_dir / f"{name}.jsonl"
+        with p.open("w", encoding="utf-8", newline="\n") as fh:
+            for ex in splits.by_name(name):
+                row = {"id": ex.example_id, "partition": ex.partition, "utt": ex.inputs, "target": ex.target}
+                fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+        paths[name] = p
+    return paths
+
+
+def read_split(path: Path | str) -> tuple[Example, ...]:
+    out = []
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            if line.strip():
+                row = json.loads(line)
+                out.append(Example(example_id=row["id"], partition=row["partition"], inputs=row["utt"], target=row["target"]))
+    return tuple(out)
+
+
+def load_splits(directory: Path | str) -> Splits:
+    d = Path(directory)
+    return Splits(*(read_split(d / f"{name}.jsonl") for name in SPLIT_NAMES))
