@@ -8,7 +8,7 @@
 secrets.yaml
 
 # Local run outputs: logs, caches, predictions, coverage data
-runs/
+/runs/
 
 # Python environments and caches
 .venv/

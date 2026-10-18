@@ -20,7 +20,7 @@ from fts.settings import load_yaml
 REPO_ROOT = Path(__file__).resolve().parent.parent
 HASH = re.compile(r"[0-9a-f]{40}")
 
-GITIGNORE_ENTRIES = (".env", "*.env", "runs/", ".venv/", "__pycache__/", ".pytest_cache/", ".hypothesis/", ".coverage", "htmlcov/",
+GITIGNORE_ENTRIES = (".env", "*.env", "/runs/", ".venv/", "__pycache__/", ".pytest_cache/", ".hypothesis/", ".coverage", "htmlcov/",
                      "*.safetensors", "*.gguf", "*.bin", "adapters/")
 GITATTRIBUTES_LINES = ("* text=auto eol=lf", "*.png binary", "*.gif binary")
 
