@@ -1,0 +1,7 @@
+# Base_Model (design.md "Base_Model"). `revision` is resolved from the Hugging Face Hub
+# the first time the model is used (task 1.1) and pinned here from then on.
+name: Qwen/Qwen2.5-1.5B-Instruct
+revision: null
+license: Apache-2.0
+license_source: https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct
+dtype: bfloat16

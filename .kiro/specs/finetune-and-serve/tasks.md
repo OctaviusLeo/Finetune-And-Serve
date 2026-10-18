@@ -121,7 +121,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
 
 ## M0 — GPU environment, VRAM dry run, and hosted API proof
 
-- [ ] 1.1 Implement the environment check and VRAM Dry_Run
+- [x] 1.1 Implement the environment check and VRAM Dry_Run
   - `scripts/dry_run.py` (logic in `fts/dry_run.py`) does the following:
     - verifies Python ≥ 3.11;
     - captures `nvidia-smi` output, including total VRAM in MiB;

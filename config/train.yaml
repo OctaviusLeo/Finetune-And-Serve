@@ -1,0 +1,20 @@
+# Fixed settings for every LoRA Run (design.md "Fine-tuning library and PEFT method").
+# The sweep varies only lora_r, lora_alpha and learning_rate (config/sweep.yaml).
+peft_method: LoRA on bf16 base weights (no quantization)
+max_seq_len: 256
+per_device_batch_size: 8
+grad_accum: 2
+epochs: 2
+warmup_ratio: 0.03
+lr_scheduler: linear
+lora_dropout: 0.05
+target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+gradient_checkpointing: true
+logging_steps: 10
+# VRAM Dry_Run (task 1.1): the worst case among the sweep configs, every sequence padded to max_seq_len.
+dry_run:
+  steps: 20
+  lora_r: 16
+  lora_alpha: 32
+  learning_rate: 2.0e-4
+  seed: 0
