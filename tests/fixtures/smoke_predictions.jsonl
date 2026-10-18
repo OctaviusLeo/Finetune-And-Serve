@@ -1,0 +1,2 @@
+{"id": "s4", "prediction": "{\"intent\": \"alarm_set\", \"slots\": [{\"type\": \"time\", \"value\": \"five am\"}]}"}
+{"id": "s5", "prediction": "Sure: {\"intent\": \"iot_hue_lightoff\", \"slots\": []}"}

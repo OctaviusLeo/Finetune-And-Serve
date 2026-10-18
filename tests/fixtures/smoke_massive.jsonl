@@ -1,0 +1,6 @@
+{"id": "s1", "locale": "en-US", "partition": "train", "scenario": "alarm", "intent": "alarm_set", "utt": "wake me up at five am", "annot_utt": "wake me up at [time : five am]"}
+{"id": "s2", "locale": "en-US", "partition": "train", "scenario": "play", "intent": "play_music", "utt": "play some jazz", "annot_utt": "play some [music_genre : jazz]"}
+{"id": "s3", "locale": "en-US", "partition": "dev", "scenario": "weather", "intent": "weather_query", "utt": "what is the weather in paris", "annot_utt": "what is the weather in [place_name : paris]"}
+{"id": "s4", "locale": "en-US", "partition": "test", "scenario": "alarm", "intent": "alarm_set", "utt": "wake me up at five am this week", "annot_utt": "wake me up at [time : five am] [date : this week]"}
+{"id": "s5", "locale": "en-US", "partition": "test", "scenario": "iot", "intent": "iot_hue_lightoff", "utt": "turn off the lights", "annot_utt": "turn off the lights"}
+{"id": "s6", "locale": "en-US", "partition": "test", "scenario": "alarm", "intent": "alarm_set", "utt": "wake me at six", "annot_utt": "wake me at [time six]"}

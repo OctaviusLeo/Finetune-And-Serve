@@ -403,7 +403,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - **Property 11: README/Model_Card number traceability** — the check flags exactly the untraceable numbers and fails when any exist.
   - **Validates: Requirements 10.4, 10.5**
 
-- [ ] 6.5 Implement the CPU Smoke_Evaluation
+- [x] 6.5 Implement the CPU Smoke_Evaluation
   - `fts/smoke_eval.py` (invocable as `python -m fts.smoke_eval`) runs the transform, the splitter, and the Task_Metric end to end on a tiny fixed input in `tests/fixtures/`. It needs no GPU, model, or network, prints a deterministic result, and exits non-zero on any failure or mismatch.
   - _Requirements: 9.3_
 
