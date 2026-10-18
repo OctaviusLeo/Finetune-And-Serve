@@ -1,6 +1,6 @@
 # Fine-Tune and Serve
 
-**This repository is private.** It has no public license, no published package and no public release, and the fine-tuned weights and LoRA Adapters are not published.
+Code is released under the [MIT License](LICENSE). Third-party packages, data and models are listed with their licenses in [THIRD_PARTY.md](THIRD_PARTY.md). There is no published package or release, and the fine-tuned weights and LoRA Adapters are not published.
 
 This project fine-tunes `{{base_model}}` with LoRA on one narrow task: turning an English voice-assistant request into intent-and-slot JSON, using the MASSIVE dataset. It measures whether that beats prompting the base model and a hosted model on the same Test_Split and metric. It then quantizes the fine-tuned model with llama.cpp, serves it behind an OpenAI-compatible endpoint, and load-tests it on one RTX 3080.
 

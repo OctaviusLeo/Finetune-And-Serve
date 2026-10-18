@@ -1,4 +1,4 @@
-# Private portfolio repository: no license field, not published to any index.
+# Licensed under MIT (see LICENSE); not published to any index.
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "finetune-and-serve"
 version = "0.1.0"
-description = "Fine-tune Qwen2.5-1.5B-Instruct with LoRA on MASSIVE intent/slot JSON, quantize with llama.cpp, and serve it (private portfolio project)."
+description = "Fine-tune Qwen2.5-1.5B-Instruct with LoRA on MASSIVE intent/slot JSON, quantize with llama.cpp, and serve it (portfolio project)."
 requires-python = ">=3.11"
 # One dependency set, every version exact. numpy and scipy stay on the last
 # releases that still support Python 3.11 so one version resolves everywhere.
