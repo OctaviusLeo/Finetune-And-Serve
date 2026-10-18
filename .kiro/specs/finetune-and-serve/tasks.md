@@ -302,7 +302,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Test the malformed-Test "not scored" path, that re-running with the same seed and fixed predictions gives equal values within 1e-6, and the seed-summary mean and spread on a fixed fixture.
   - _Requirements: 5.3, 5.7, 5.8_
 
-- [ ] 4.3 Implement the error-analysis harness
+- [x] 4.3 Implement the error-analysis harness
   - `fts/error_analysis.py` defines `FailureGroup`, `ErrorAnalysis`, and the rule-based classifier for design.md's five-group taxonomy (first matching group wins). It analyzes every failure (F1 < 1) of the serving seed and saves five examples per group.
   - _Requirements: 5.4, 5.5_
 
