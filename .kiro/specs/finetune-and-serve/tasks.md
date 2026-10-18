@@ -353,7 +353,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - A `docker`-marked test starts `scripts/serve.sh q4` and gets a chat completion back through `ModelClient`. It first runs at the M4 gate, after task 5.5 has created the model files.
   - _Requirements: 6.4, 6.5, 6.6_
 
-- [ ] 5.5 Quantize, serve, and measure pre/post-quantization quality
+- [x] 5.5 Quantize, serve, and measure pre/post-quantization quality
   - Commit and check the GPU is free. Pull the pinned images detached.
   - Run the quantizer.
   - Serve `f16`, evaluate the whole Test_Split through the endpoint one request at a time (temperature 0, compact prompt), then do the same with `q4`. Sample VRAM throughout.

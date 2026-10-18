@@ -1,0 +1,68 @@
+{
+  "engine": "llama-server b11580, one request at a time, temperature 0, seed 0",
+  "peak_vram_within_total": true,
+  "prompt_template": "config/prompts/system.txt, config/prompts/finetune.txt",
+  "reference_hf": {
+    "engine": "transformers bf16 (fts.infer)",
+    "metric": {
+      "lower": 0.8402061808400073,
+      "point": 0.8507515106876237,
+      "upper": 0.8603552450967548
+    },
+    "run_id": "B-seed2",
+    "seed": 2
+  },
+  "stamp": {
+    "command": "python -m fts.quant_quality",
+    "commit": "e47011f37ab925ba66d7ec4d0929b0cb53712ae4",
+    "seed": 0
+  },
+  "variants": [
+    {
+      "failed_requests": 0,
+      "method": "gguf-f16",
+      "metric": {
+        "lower": 0.8394046860913875,
+        "point": 0.8500966286944768,
+        "upper": 0.8599892181251461
+      },
+      "model_file": "ft-f16.gguf",
+      "not_scored": 0,
+      "scored": 2974,
+      "seconds": 519.8,
+      "test_ids_sha256": "9b9dde5ca8f356893a4c513fe1cccb1c23d7a8b373d44497bef7c46dec54c835",
+      "variant": "f16",
+      "vram": {
+        "csv": "/mnt/c/dev/Finetune-And-Serve/runs/vram/serve_f16.csv",
+        "failed_samples": 0,
+        "peak_mib": 4859,
+        "samples": 503,
+        "total_mib": 10240,
+        "within_budget": true
+      }
+    },
+    {
+      "failed_requests": 0,
+      "method": "gguf-q4_k_m",
+      "metric": {
+        "lower": 0.8360310527942505,
+        "point": 0.8461910875495274,
+        "upper": 0.8561381255391848
+      },
+      "model_file": "ft-q4_k_m.gguf",
+      "not_scored": 0,
+      "scored": 2974,
+      "seconds": 329.6,
+      "test_ids_sha256": "9b9dde5ca8f356893a4c513fe1cccb1c23d7a8b373d44497bef7c46dec54c835",
+      "variant": "q4",
+      "vram": {
+        "csv": "/mnt/c/dev/Finetune-And-Serve/runs/vram/serve_q4.csv",
+        "failed_samples": 0,
+        "peak_mib": 2617,
+        "samples": 319,
+        "total_mib": 10240,
+        "within_budget": true
+      }
+    }
+  ]
+}
