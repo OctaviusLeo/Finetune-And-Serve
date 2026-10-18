@@ -137,3 +137,12 @@ Filled in at tasks 3.8 and 4.7.
 ## Serving images
 
 Filled in at task 5.5.
+
+## Determinism notes: training
+
+- Training determinism check (30 optimizer steps of config B, seed 1, run twice): **identical**; largest loss difference 0 (tolerance 1e-06)
+- Nondeterministic kernels named by PyTorch's warn-only determinism mode:
+  - `Memory Efficient attention defaults to a non-deterministic algorithm. To explicitly enable determinism call torch.use_deterministic_algorithms(True, warn_only=False). (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/native/transformers/cuda/attention_backward.cu:910.)`
+- Command: `python scripts/check_train_determinism.py`
+- Seed: `1`
+- Commit: `b7212565dd32fd119b0881d99d5d351d6facf4f9`

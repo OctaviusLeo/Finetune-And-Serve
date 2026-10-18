@@ -281,7 +281,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Run seeds 2 and 3 of the Final_Configuration detached and poll them. Write `results/final_runs.json` (stamped) with the three RunRecords and the serving seed.
   - _Requirements: 4.2, 4.5_
 
-- [ ] 3.8 Run the training determinism check
+- [x] 3.8 Run the training determinism check
   - Run `scripts/check_train_determinism.py` detached and write `results/train_determinism.json` (stamped).
   - _Requirements: 4.6_
 
