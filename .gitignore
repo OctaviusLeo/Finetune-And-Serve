@@ -1,0 +1,34 @@
+# Secret-bearing files (never commit; keys come from environment variables only)
+.env
+*.env
+.env.*
+*.key
+*.pem
+*.token
+secrets.yaml
+
+# Local run outputs: logs, caches, predictions, coverage data
+runs/
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.hypothesis/
+*.egg-info/
+build/
+dist/
+.coverage
+.coverage.*
+htmlcov/
+
+# Model files (they live in ~/fts-artifacts and are never committed)
+adapters/
+checkpoints/
+outputs/
+*.safetensors
+*.gguf
+*.bin
+*.pt

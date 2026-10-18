@@ -1,0 +1,43 @@
+# Private portfolio repository: no license field, not published to any index.
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "finetune-and-serve"
+version = "0.1.0"
+description = "Fine-tune Qwen2.5-1.5B-Instruct with LoRA on MASSIVE intent/slot JSON, quantize with llama.cpp, and serve it (private portfolio project)."
+requires-python = ">=3.11"
+# One dependency set, every version exact. numpy and scipy stay on the last
+# releases that still support Python 3.11 so one version resolves everywhere.
+dependencies = [
+    "torch==2.14.1",
+    "transformers==5.20.1",
+    "peft==0.21.2",
+    "accelerate==1.15.0",
+    "numpy==2.4.6",
+    "scipy==1.17.1",
+    "matplotlib==3.11.2",
+    "openai==3.35.0",
+    "httpx==0.28.1",
+    "pyyaml==6.0.3",
+    "pytest==9.1.1",
+    "pytest-cov==7.1.0",
+    "hypothesis==6.170.1",
+]
+
+[tool.uv]
+# WSL (Ubuntu 24.04) and the GitHub-hosted ubuntu-latest runner are the only targets.
+environments = ["sys_platform == 'linux'"]
+
+[tool.setuptools.packages.find]
+include = ["fts*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
+markers = [
+    "gpu: needs the NVIDIA GPU (not run in hosted CI)",
+    "docker: needs Docker and the llama.cpp images (not run in hosted CI)",
+]
