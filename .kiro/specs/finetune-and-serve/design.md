@@ -4,7 +4,7 @@
 
 Fine-Tune and Serve fine-tunes a small open-weight language model (the Base_Model) on **one narrow task** on a single NVIDIA RTX 3080, proves the Finetuned_Model beats prompting the Base_Model alone, then quantizes and serves it behind an OpenAI-compatible endpoint with measured latency and throughput. The System is parameter-efficient (LoRA), seed-fixed, and fully reproducible: every reported number is a Measured_Value produced by a repository script and recorded with its generating command, seed, and full 40-character commit hash (Req 0.1).
 
-The concrete choices, all made in this document so the plan runs without owner decisions: the Base_Model is **Qwen2.5-1.5B-Instruct** (Apache 2.0), fine-tuned with **LoRA on bf16 base weights**; the Task is **intent-and-slot extraction to JSON** on the English part of the **MASSIVE** dataset (CC BY 4.0), scored by **field-level F1**; the hosted baseline is OpenAI **`gpt-6-luna`** under a **$2.00 Spend_Cap**; the served model is a **llama.cpp GGUF Q4_K_M** quantization behind **`llama-server`**.
+The concrete choices, all made in this document so the plan runs without owner decisions: the Base_Model is **Qwen2.5-1.5B-Instruct** (Apache 2.0), fine-tuned with **LoRA on bf16 base weights**; the Task is **intent-and-slot extraction to JSON** on the English part of the **MASSIVE** dataset (CC BY 4.0), scored by **field-level F1**; the hosted baseline is TypeSafe's **Jev** (`jev-1.13.0`, a decision model that selects the intent and slot spans) under a **$2.00 Spend_Cap**; the served model is a **llama.cpp GGUF Q4_K_M** quantization behind **`llama-server`**.
 
 ### Problem
 
@@ -56,7 +56,7 @@ flowchart TB
     subgraph Base["Baselines (M1)"]
         BZ[Base zero-shot]
         BF[Base few-shot]
-        HF[Hosted few-shot<br/>gpt-6-luna under Spend_Cap]
+        HF[Hosted few-shot<br/>Jev under Spend_Cap]
     end
 
     subgraph Train["Fine-tuning (M2)"]
@@ -133,7 +133,7 @@ sequenceDiagram
 - Splits come from MASSIVE's official partitions and are verified pairwise disjoint; the overlap check reports every offending example id and the count, and exits non-zero on overlap (Req 2.4).
 - Few-shot exemplars come **only** from the Train_Split, and the label lists in the prompts are built from the Train_Split only, so the Test_Split never leaks into a prompt (Req 3.5).
 - Model selection and step counts are decided on Train/Validation only; the Test_Split is consumed only by the evaluator and the baselines, keeping the final numbers honest (Req 4.7, 5.2).
-- `ModelClient` is strictly OpenAI-compatible, so the hosted baseline, the local served model, and the Load_Test share one client.
+- `ModelClient` is strictly OpenAI-compatible, so the local served model and the Load_Test share one client. The hosted Jev baseline uses `JevClient` over TypeSafe's HTTP API with the same spend ledger.
 
 ## Technology Choices and Rationale
 
@@ -188,7 +188,7 @@ Rationale against the original 7–8B QLoRA recommendation: a 1.5B model trains 
 - `config/prompts/finetune.txt` — the compact user message used for training, evaluating the Finetuned_Model, and serving: the instruction and the utterance.
 - `config/prompts/zero_shot.txt` — the instruction, the output format, the list of every intent and every slot type (built from the Train_Split only, stored in `config/labels.json`), and the utterance.
 - `config/prompts/few_shot.txt` — the zero-shot prompt plus 10 exemplars shown as prior user/assistant turns. They are chosen by `scripts/select_exemplars.py`: shuffle the Train_Split with seed 0 and take the first example of each of 10 distinct scenarios. They are stored in `config/few_shot_exemplars.json` (Req 3.5, 3.6).
-- The hosted baseline uses the few-shot messages unchanged. The Results_Table states that each system is measured with its own recorded template.
+- The hosted Jev baseline sees the same 10 exemplars in its state and chooses among the same label lists, through its own recorded question templates (see "Hosted model and Spend_Cap"). The Results_Table states that each system is measured with its own recorded template.
 
 ### Local inference for baselines and evaluation
 
@@ -196,11 +196,16 @@ All Test_Split and Validation_Split numbers for the Base_Model and the Finetuned
 
 ### Hosted model and Spend_Cap
 
-- **Model:** OpenAI `gpt-6-luna`, called through Chat Completions at `https://api.openai.com/v1` with `reasoning_effort: "none"` and `max_completion_tokens: 128`. Facts from OpenAI's model and pricing pages (accessed 2026-10-17): it supports Chat Completions and the reasoning-effort values `none` through `max`. Its Standard prices per 1M tokens are $0.10 input, $0.01 cached input, $0.125 cache writes, and $0.50 output, with higher rates only for prompts over 272K tokens. The pages don't say whether `temperature` or `seed` are accepted.
-- **Parameters:** the client sends `temperature: 0` and `seed`. If the API rejects either, the client drops it, and the run records that in `docs/ENVIRONMENT.md`. Any nondeterminism is then provider-documented (Req 0.3). Each response's `model` field is recorded.
-- **Key:** read only from the environment variable `OPENAI_API_KEY` (Req 0.9, 0.13). `scripts/wsl_run.sh` exports it from `~/.config/fts/secrets.env`, which the owner creates outside the repository. It is never printed or logged.
-- **Spend accounting (Req 3.3, 3.4):** cost per request = prompt_tokens × $0.125 / 1M + completion_tokens × $0.50 / 1M. Every prompt token is charged at the higher of the input and cache-write rates, so the recorded spend is an upper bound on the bill. Every hosted request in the project, including the M0 check, is appended to `results/hosted_ledger.jsonl`. Before each request, the client adds a worst case (prompt length estimated as characters ÷ 3, plus 128 output tokens) to the ledger total. If that would exceed the Spend_Cap, it stops before sending, reports the spend reached and the cap, and exits non-zero.
-- **Spend_Cap:** $2.00, set here by the owner; a different value written here before the run replaces it. Task 1.3 copies it into `config/hosted.yaml` as `spend_cap_usd`, and no later task raises it. Planning estimate for the few-shot baseline on all 2,974 Test examples, at 900–1,600 prompt tokens and 30–80 output tokens per request: $0.38–$0.71.
+- **Model (owner decision, 2026-10-18):** TypeSafe's **Jev**, a System One decision model, pinned to the versioned ID `jev-1.13.0` (the version the `jev-latest` alias pointed to on 2026-10-18) so that alias moves cannot change the results. It is called through TypeSafe's HTTP API, `POST https://api.typesafe.ai/v1/systemone` with `Authorization: Bearer <key>`. Facts from TypeSafe's API and Models pages (accessed 2026-10-18): a request carries a `state` and typed questions (`choice` with at most 255 options, `noul`, `score`), and the response returns calibrated probabilities, the `model` that answered, and `usage.input_tokens` / `usage.output_tokens`. Context is 64k tokens per request and 32k per question; the price is $0.042 per 1M input tokens, and output tokens are free.
+- **Method: select instead of generate.** Jev returns typed answers, not text, so the hosted baseline turns the Task into selections that code assembles into the same JSON the other systems produce:
+  - **State:** the request plus the same 10 Train_Split exemplars the local few-shot baseline uses (each with its gold JSON), so the baseline stays few-shot and draws nothing from Validation or Test (Req 3.5).
+  - **Intent:** one `choice` over every Train_Split intent (`config/labels.json`).
+  - **Slots:** code lists every contiguous span of up to 6 whitespace tokens of the request (in the Train_Split every slot value is a whitespace-token span, and 6 tokens cover 99.6% of them). One `choice` per span asks which slot type that exact span is, over every Train_Split slot type plus `none` ("not a complete slot value"). Code keeps each span whose most probable answer is a slot type and, from the most probable down, drops any span that overlaps one already kept; the kept slots are listed in request order. A request with more than 100 spans is sent as several requests over the same state.
+  - The question wording is recorded in `config/prompts/jev.yaml` (Req 3.6). It was prototyped on Test example 319 before integration (intent 1.00; `barcelona` → `place_name` 0.94; `in barcelona` → `none` 0.66).
+- **Parameters and determinism:** Jev has no temperature or seed parameter; with the version pinned, the same request is expected to return the same answers. Any variation is provider-side (Req 0.3). Each response's `model` field is recorded.
+- **Key:** read only from the environment variable `TYPESAFE_API_KEY` (Req 0.9, 0.13). It reaches WSL either from the Windows environment (forwarded with `WSLENV=TYPESAFE_API_KEY/u`) or from `~/.config/fts/secrets.env`, which `scripts/wsl_run.sh` exports when it exists. It is never printed, logged, or written by this project.
+- **Spend accounting (Req 3.3, 3.4):** cost per request = input_tokens × $0.042 / 1M (output tokens are free). Every hosted request in the project, including the M0 check, is appended to `results/hosted_ledger.jsonl`. Before each request, the client adds a worst case (input tokens estimated as the request body's characters ÷ 3) to the ledger total. If that would exceed the Spend_Cap, it stops before sending, reports the spend reached and the cap, and exits non-zero.
+- **Spend_Cap:** $2.00, set here by the owner; a different value written here before the run replaces it. `config/hosted.yaml` holds it as `spend_cap_usd`, and no task raises it. Planning estimate for all 2,974 Test examples at about 27 span questions per request: 6,000–10,000 input tokens per request, $0.75–$1.25 in total.
 
 ### Quantization and serving runtime
 
@@ -293,7 +298,15 @@ def aggregate(scores: Sequence[float]) -> float:
 
 ### ModelClient and spend ledger (M0, reused M1/M4)
 
-Responsibility: call any OpenAI-compatible endpoint (hosted baseline, local `llama-server`); fail fast on a missing secret; enforce timeouts; retry 429/5xx with exponential backoff up to 5 attempts; count tokens for cost; enforce the Spend_Cap (Req 0.13, 3.3, 3.4, 6.5).
+Responsibility: call any OpenAI-compatible endpoint (the local `llama-server`); fail fast on a missing secret; enforce timeouts; retry 429/5xx with exponential backoff up to 5 attempts; count tokens; check and record a spend ledger when one is given (Req 0.13, 3.3, 3.4, 6.5). `JevClient` does the same for TypeSafe's HTTP API (retrying 429/529/5xx), and it is the client that carries the hosted ledger:
+
+```python
+class JevClient:
+    def __init__(self, base_url: str, model: str, api_key_env: str, timeout_s: float,
+                 ledger: "SpendLedger | None" = None) -> None:
+        """Raises before any request, naming the variable, if TYPESAFE_API_KEY is unset/empty."""
+    def ask(self, state: object, questions: dict) -> "JevResponse": ...   # answers, input/output tokens, model
+```
 
 ```python
 class ModelClient:
@@ -645,7 +658,7 @@ Generation strategy: generate document fragments mixing traceable numbers (prese
 - **Split overlap (Req 2.4):** `check_overlap` returns the offending ids; the caller reports every id and the total count and exits non-zero.
 - **Malformed Dataset example (Req 2.6):** excluded, with its id and reason reported and the total excluded count recorded; processing continues.
 - **Spend-cap breach (Req 3.4):** the ledger refuses the request whose worst-case cost would exceed the Spend_Cap, the baseline reports spend reached and the cap, and exits non-zero.
-- **Missing secret env var (Req 0.9, 0.13, 6.5):** any component depending on a secret (the OpenAI key, or the serving key when required) reads it from `os.environ`; if unset/empty it terminates before any request needing the secret, names the missing variable, and exits non-zero. `scripts/serve.sh` fails to start and reports the missing secret.
+- **Missing secret env var (Req 0.9, 0.13, 6.5):** any component depending on a secret (the TypeSafe key, or the serving key when required) reads it from `os.environ`; if unset/empty it terminates before any request needing the secret, names the missing variable, and exits non-zero. `scripts/serve.sh` fails to start and reports the missing secret.
 - **Server timeout / unavailable / rate limit:** `ModelClient` enforces a timeout, retries 429 and 5xx responses with exponential backoff up to 5 attempts, and then raises a typed error; batch/eval contexts report the cause and exit non-zero (Req 0.4). A rejected request parameter (for example `temperature` on a reasoning model) is dropped once and recorded.
 - **Malformed Test example in evaluation (Req 5.8):** reported as "not scored" with its cause; remaining examples still score.
 - **Failed request during the Load_Test (Req 7.5):** counted as failed, excluded from latency/throughput statistics, and reported alongside them.
@@ -698,7 +711,7 @@ This design realizes the always-on portfolio rules and Requirement 0 as follows:
 
 Every task in `tasks.md` is implemented by the agent, including the choices made above (Base_Model, method, sequence length, Task, Dataset, metric, prompts and exemplars, sweep configurations and rationale, failure taxonomy, quantization, serving runtime, and load-test schedule) and the Model_Card and README prose. Each milestone ends with an automated gate instead of an owner review stop.
 
-The owner's only inputs come before the run: the OpenAI API key in `~/.config/fts/secrets.env`, and optionally a different Spend_Cap written into the "Hosted model and Spend_Cap" section above. Code written by an earlier run of this plan may already exist; each task brings it in line with this design rather than starting over.
+The owner's only inputs come before the run: the TypeSafe API key in the environment as `TYPESAFE_API_KEY` (forwarded into WSL, or in `~/.config/fts/secrets.env`), and optionally a different Spend_Cap written into the "Hosted model and Spend_Cap" section above. Code written by an earlier run of this plan may already exist; each task brings it in line with this design rather than starting over.
 
 ## Milestone Mapping
 
@@ -716,7 +729,7 @@ Each milestone ends in an automated gate before the next begins; gate failures t
 ## Known limitations (carried into the README and Model_Card)
 
 - **Each system has its own prompt.** The base and hosted baselines see the full intent and slot-type lists plus 10 exemplars; the Finetuned_Model sees a compact prompt. The comparison is between documented systems on the same Test_Split and metric.
-- **Hosted model alias.** `gpt-6-luna` is an alias, and OpenAI retires models; the results describe the model that answered on the run date, whose `model` field is recorded.
+- **The hosted baseline selects; it does not generate.** Jev picks the intent and, for each candidate span of up to 6 words, a slot type or `none`; code assembles the JSON. Slot values longer than 6 words (0.4% in the Train_Split) cannot be produced, and a slot type can only label words that appear in the request. Results are pinned to `jev-1.13.0`, whose `model` field is recorded.
 - **Duplicate utterances.** MASSIVE's official partitions can share utterance texts; the count is reported.
 - **Two inference engines.** Training-stage numbers come from Hugging Face `transformers` in bf16; the pre/post-quantization comparison and the Load_Test use `llama-server`. Numbers from the two engines are compared only within the same engine.
 - **"4-bit" is nominal.** Q4_K_M mixes 4-bit and higher-precision k-quant blocks; the bits per weight reported by `llama-quantize` are recorded.

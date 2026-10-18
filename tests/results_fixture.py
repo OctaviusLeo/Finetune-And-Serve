@@ -24,16 +24,16 @@ def write_results(results: Path) -> Path:
     w("data_counts.json", {"counts": {"train": 11514, "validation": 2033, "test": 2974}, "excluded": 0, "overlap": {"pairs": {}, "total": 0},
                            "dataset": {"name": "MASSIVE", "version": "1.1", "locale": "en-US"},
                            "shared_utterances": {"train-validation": 11, "train-test": 21, "validation-test": 5}})
-    ledger = {"spend_usd": 0.4321, "spend_cap_usd": 2.0, "prompt_price_per_mtok": 0.125, "completion_price_per_mtok": 0.5, "requests": 2975}
+    ledger = {"spend_usd": 0.4321, "spend_cap_usd": 2.0, "prompt_price_per_mtok": 0.042, "completion_price_per_mtok": 0.0, "requests": 2975}
     baselines = [
         {"name": "base_zero_shot", "metric": metric(0.3112), "not_scored": 0, "test_ids_sha256": DIGEST, "prompt_template": "config/prompts/zero_shot.txt"},
         {"name": "base_few_shot", "metric": metric(0.4523), "not_scored": 0, "test_ids_sha256": DIGEST, "prompt_template": "config/prompts/few_shot.txt"},
         {"name": "hosted_few_shot", "metric": metric(0.7012), "not_scored": 0, "test_ids_sha256": DIGEST, "prompt_template": "config/prompts/few_shot.txt",
-         "details": {"ledger": ledger, "response_models": ["gpt-6-luna-2026-09-30"]}},
+         "details": {"ledger": ledger, "response_models": ["jev-1.13.0"]}},
     ]
     w("baselines.json", {"baselines": baselines, "test_ids_sha256": DIGEST, "n_test": 2974,
                          "hosted_spend": {"baseline_spend_usd": 0.4318, "ledger_total_usd": 0.4321, "spend_cap_usd": 2.0, "within_cap": True,
-                                          "prompt_price_per_mtok": 0.125, "completion_price_per_mtok": 0.5}})
+                                          "prompt_price_per_mtok": 0.042, "completion_price_per_mtok": 0.0}})
     w("sweep.json", {"configs": [cfg("A", 8, 16, 2e-4), cfg("B", 16, 32, 2e-4), cfg("C", 16, 32, 1e-4)], "val_metrics": {"A": 0.8811, "B": 0.8902, "C": 0.8855},
                      "selected": cfg("B", 16, 32, 2e-4), "selection_rule": "highest Validation F1; ties go to the config listed first",
                      "rationale_path": "docs/SWEEP_RATIONALE.md"})

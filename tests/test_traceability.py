@@ -14,7 +14,7 @@ def write(tmp_path, name, text):
 
 def test_doc_numbers_skip_names_urls_and_labels():
     text = ("Test F1 0.8834 [0.8721, 0.8940] on 2,974 examples; P95 under 2000 ms at 95% of requests.\n"
-            "Qwen2.5-1.5B-Instruct, gpt-6-luna, Q4_K_M, Ubuntu-24.04, scripts/verify_m5.sh, see https://example.com/v1.2/x 7.\n"
+            "Qwen2.5-1.5B-Instruct, jev-1.13.0, Q4_K_M, Ubuntu-24.04, scripts/verify_m5.sh, see https://example.com/v1.2/x 7.\n"
             "torch 2.14.1 costs $0.4318.")
     tokens = [t for _, t in ct.doc_numbers(text)]
     assert tokens == ["0.8834", "0.8721", "0.8940", "2974", "2000", "95", "7", "2.14.1", "0.4318"]

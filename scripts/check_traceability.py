@@ -4,7 +4,7 @@ Every numeric token in README.md and MODEL_CARD.md must appear in a file a
 repository script generated: results/summary.md, results/*.json,
 results/doc_facts.json, or the evidence in docs/ENVIRONMENT.md. URLs are
 ignored. A number glued to letters or joined by "-" or "/" (P95, F1, Q4_K_M,
-gpt-6-luna, Ubuntu-24.04, Qwen2.5-1.5B) is part of a name, not a number.
+jev-1.13.0, Ubuntu-24.04, Qwen2.5-1.5B) is part of a name, not a number.
 Thousands separators are ignored ("2,974" == "2974").
 
     python scripts/check_traceability.py [doc ...]   (default: README.md MODEL_CARD.md)

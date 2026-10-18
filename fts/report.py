@@ -24,7 +24,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SECTIONS = ("Data", "Test F1: baselines and fine-tuned seeds", "Sweep", "Quantization quality", "Error analysis", "Load test", "Hosted spend")
 PLOTS = ("loss_curves.png", "sweep_quality.png")
-SYSTEM_LABELS = {"base_zero_shot": "Base zero-shot", "base_few_shot": "Base few-shot", "hosted_few_shot": "Hosted few-shot (gpt-6-luna)"}
+SYSTEM_LABELS = {"base_zero_shot": "Base zero-shot", "base_few_shot": "Base few-shot", "hosted_few_shot": "Hosted few-shot (TypeSafe Jev)"}
 
 
 def f1(x: float) -> str:
@@ -229,7 +229,7 @@ def plot_sweep_quality(results_dir: Path, out: Path) -> Path | None:
     left.bar(names, [sweep["val_metrics"][n] for n in names], color="#4C72B0")
     left.set_title("Sweep: Validation F1")
     left.set_ylim(0, 1)
-    systems = [(SYSTEM_LABELS[b["name"]].replace(" (gpt-6-luna)", ""), b["metric"]) for b in base["baselines"]]
+    systems = [(SYSTEM_LABELS[b["name"]].replace(" (TypeSafe Jev)", ""), b["metric"]) for b in base["baselines"]]
     systems += [(f"fine-tuned s{s['seed']}", s["metric"]) for s in ft["seeds"]]
     qq = load(results_dir, "quant_quality.json")
     if qq is not None:

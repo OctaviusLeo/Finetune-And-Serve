@@ -16,11 +16,14 @@ def test_cost_formula():
     assert PRICES.cost(1000, 100) == pytest.approx((1000 * 0.125 + 100 * 0.5) / 1e6)
 
 
-def test_prices_from_hosted_config_use_the_higher_prompt_rate():
+def test_prices_from_hosted_config():
     cfg = settings.load_yaml(settings.CONFIG_DIR / "hosted.yaml")
     prices = spend.prices_from_config(cfg)
-    assert prices == spend.Prices(prompt_per_mtok=0.125, completion_per_mtok=0.50)
-    assert cfg["spend_cap_usd"] == 2.00 and cfg["model"] == "gpt-6-luna"
+    assert prices == spend.Prices(prompt_per_mtok=0.042, completion_per_mtok=0.0)
+    assert cfg["spend_cap_usd"] == 2.00 and cfg["model"] == "jev-1.13.0"
+    with_cache_write = {"prices_usd_per_1m_tokens": {"input": 0.10, "cache_write": 0.125, "output": 0.5}}
+    assert spend.prices_from_config(with_cache_write) == spend.Prices(prompt_per_mtok=0.125, completion_per_mtok=0.5)
+    assert spend.estimate_text_tokens("x" * 10) == 4
 
 
 def test_estimate_prompt_tokens():

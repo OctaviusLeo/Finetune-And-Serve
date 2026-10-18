@@ -1,7 +1,7 @@
 """OpenAI-compatible chat-completions client (Req 0.9, 0.13, 3.3, 3.4, 6.5).
 
-One client drives the hosted baseline (OpenAI), the local ``llama-server``, and
-the load test. It:
+One client drives the local ``llama-server``: the pre/post-quantization quality
+runs and the load test. (The hosted Jev baseline uses fts.jev_client.) It:
 
 * reads the API key only from ``os.environ[api_key_env]`` and, when a key is
   required but unset or empty, raises :class:`MissingSecretError` naming the
@@ -66,7 +66,7 @@ class Completion:
 
 @dataclass
 class ClientConfig:
-    base_url: str  # e.g. https://api.openai.com/v1 or http://127.0.0.1:8080/v1
+    base_url: str  # e.g. http://127.0.0.1:8080/v1 (llama-server)
     model: str
     api_key_env: str | None = None
     timeout_s: float = 60.0

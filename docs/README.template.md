@@ -9,7 +9,7 @@ Every number in this file is generated. It comes from `results/summary.md` or `r
 ## Headline
 
 - **Fine-tuned** (mean ± standard deviation over {{n_final_seeds}} seeds): field-level F1 **{{f1_ft_mean}} ± {{f1_ft_spread}}** on the {{n_test}} Test examples.
-- **Baselines** on the same Test_Split and metric: base model zero-shot {{f1_zero_shot}}, base model few-shot {{f1_few_shot}}, hosted `{{hosted_model}}` few-shot {{f1_hosted}}. Each figure is the point estimate with its {{ci_percent}}% bootstrap CI.
+- **Baselines** on the same Test_Split and metric: base model zero-shot {{f1_zero_shot}}, base model few-shot {{f1_few_shot}}, TypeSafe Jev (`{{hosted_model}}`) few-shot {{f1_hosted}}. Each figure is the point estimate with its {{ci_percent}}% bootstrap CI.
 - **Served** with llama-server: GGUF F16 {{f1_f16}}, GGUF Q4_K_M {{f1_q4}}. Maximum sustained concurrency in the load test: **{{max_concurrency}}**.
 
 ## Architecture
@@ -102,7 +102,7 @@ CI (GitHub Actions on `ubuntu-latest`) runs the unit tests and the Smoke_Evaluat
 ## Known limitations
 
 - **Each system has its own prompt.** The base and hosted baselines see the full intent and slot-type lists plus {{n_exemplars}} exemplars from the Train_Split. The fine-tuned model sees a compact prompt. The comparison is between documented systems on the same Test_Split and metric.
-- **Hosted model alias.** `{{hosted_model}}` is an alias, and OpenAI retires models. The results describe the model that answered on the run date, and its `model` field is recorded.
+- **The hosted baseline selects; it does not generate.** TypeSafe's Jev returns typed probabilities, so it picks the intent from the label list and, for each candidate span of up to {{hosted_max_span_tokens}} words, a slot type or none; code assembles the JSON and resolves overlapping spans. Slot values longer than that cannot be produced. The version is pinned to `{{hosted_model}}`, and each response's `model` field is recorded.
 - **Duplicate utterances.** MASSIVE's official partitions share some utterance texts. The counts are in the Data section.
 - **Two inference engines.** Training-stage numbers come from Hugging Face `transformers` in bf16. The pre/post-quantization comparison and the load test use `llama-server`. Numbers are compared only within one engine.
 - **"4-bit" is nominal.** Q4_K_M mixes 4-bit and higher-precision k-quant blocks. The measured bits per weight are in the Quantization section.

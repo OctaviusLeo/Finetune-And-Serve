@@ -102,7 +102,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
 - [x] 0.1 Bring the repository scaffold, environment, helper scripts, and GitHub remote in line with the design
   - Keep the `fts/` package, `tests/`, and `scripts/` from the earlier run, and add `config/`, `data/`, `results/`, `docs/`, and `runs/` (gitignored) where missing.
   - Delete what the earlier run left that this plan replaces: the vLLM launcher `scripts/serve.py` (task 5.3 replaces it with `scripts/serve.sh`), every file under `results/` except `.gitkeep` (this run regenerates every result), and an `.agents/` folder if one exists (another tool's notes from the earlier run; they do not apply to this plan). An earlier module that no task names, such as `fts/environment.py` or `fts/quant_eval.py`, is either reused by the task whose work it does or deleted together with its tests.
-  - Make `pyproject.toml` a `uv` project with `requires-python = ">=3.11"` and one dependency set, every dependency pinned to an exact version: torch (from PyPI), transformers, peft, accelerate (and trl only if the trainer uses it), numpy, scipy, matplotlib, openai, httpx, pyyaml, pytest, pytest-cov, hypothesis. Drop `vllm`, `bitsandbytes`, and the earlier `gpu`/`test` extras split. Register the pytest markers `gpu` and `docker`. Generate `uv.lock`, and remove the earlier `requirements.txt`, which the lockfile replaces.
+  - Make `pyproject.toml` a `uv` project with `requires-python = ">=3.11"` and one dependency set, every dependency pinned to an exact version: torch (from PyPI), transformers, peft, accelerate (and trl only if the trainer uses it), numpy, scipy, matplotlib, httpx, pyyaml, pytest, pytest-cov, hypothesis. Drop `vllm`, `bitsandbytes`, and the earlier `gpu`/`test` extras split. Register the pytest markers `gpu` and `docker`. Generate `uv.lock`, and remove the earlier `requirements.txt`, which the lockfile replaces.
   - Create `scripts/wsl_run.sh`, `scripts/bg.sh`, and `scripts/bg_status.sh` exactly as written in `.kiro/steering/environment.md`.
   - Write `scripts/test_unit.sh`, the hosted-CI test command: `uv run --frozen pytest -m "not gpu and not docker"` with coverage over `fts/` and `scripts/` written to `runs/coverage.json`, then `uv run --frozen python scripts/check_coverage.py runs/coverage.json`. Write `scripts/check_coverage.py`, with its own unit tests, which fails and lists every module in `fts/` or `scripts/` that has more than one public function or more than 50 source lines and is under 80% statement coverage.
   - Create the environment with `wsl -d Ubuntu-24.04 -- bash /mnt/c/dev/Finetune-And-Serve/scripts/wsl_run.sh uv sync --frozen`. Through the same wrapper, confirm that `python -c "import torch; print(torch.__version__, torch.cuda.is_available())"` reports CUDA available and that `bash scripts/test_unit.sh` exits 0.
@@ -156,7 +156,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
 
 - [ ] 1.6 Run the Dry_Run and the hosted API proof, and record the environment
   - With nothing of this project running, record the idle `nvidia-smi --query-gpu=memory.used` reading in `runs/gpu_idle_mib.txt` (the GPU-free check in design.md compares against it). If the reading is above 3,072 MiB, another program is holding GPU memory: wait in 5-minute steps for up to 20 minutes for it to drop, and record a blocker if it doesn't. Then run `scripts/dry_run.py` detached and poll it. Confirm that the measured peak GPU memory is at most the `nvidia-smi` total. If it is over, follow design.md's VRAM fallback and record the reason.
-  - Write and run `scripts/hosted_check.py`: one request through `ModelClient` and the ledger to `gpt-6-luna` with `reasoning_effort: "none"`. Record the returned `model` field, which parameters were accepted, the token counts, and the cost.
+  - Write and run `scripts/hosted_check.py`: one request through `JevClient` and the ledger to Jev (`jev-1.13.0`). Record the returned `model` field, the answer, the token counts, and the cost.
   - Record in `docs/ENVIRONMENT.md`, each with a verifiable artifact:
     - the Base_Model name, revision, quantization used for the Dry_Run (none, bf16), and license (Apache-2.0, from its model card);
     - the exact versions of torch, CUDA, transformers, peft, and accelerate (and trl if used);
@@ -230,7 +230,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - `fts/baselines.py` defines `BaselineResult` and `run_baselines`, evaluating three baselines on the Test_Split with the Task_Metric and a 95% bootstrap CI each:
     - Base_Model zero-shot (local);
     - Base_Model few-shot (local);
-    - Hosted_Model few-shot (`gpt-6-luna` through `ModelClient` and the ledger).
+    - Hosted_Model few-shot (Jev through `JevClient` and the ledger: the intent and slot-span selections design.md describes, assembled into the task JSON).
   - It records each baseline's prompt template and the hosted spend. If the ledger refuses a request, it stops, reports the spend reached and the cap, and exits non-zero.
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.6_
 

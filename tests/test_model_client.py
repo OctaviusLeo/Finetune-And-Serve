@@ -13,7 +13,7 @@ from fts import spend
 MESSAGES = [{"role": "system", "content": "sys"}, {"role": "user", "content": "set an alarm"}]
 
 
-def ok_body(text="{}", model="gpt-6-luna-2026-09-01", usage=True):
+def ok_body(text="{}", model="test-model-2026-09-01", usage=True):
     body = {"model": model, "choices": [{"message": {"role": "assistant", "content": text}, "finish_reason": "stop"}]}
     if usage:
         body["usage"] = {"prompt_tokens": 50, "completion_tokens": 7}
@@ -21,7 +21,7 @@ def ok_body(text="{}", model="gpt-6-luna-2026-09-01", usage=True):
 
 
 def make_client(handler, *, api_key_env=None, ledger=None, sleeps=None, **cfg):
-    config = mc.ClientConfig(base_url="https://api.example.invalid/v1", model="gpt-6-luna", api_key_env=api_key_env, **cfg)
+    config = mc.ClientConfig(base_url="https://api.example.invalid/v1", model="test-model", api_key_env=api_key_env, **cfg)
     return mc.ModelClient(
         config, ledger=ledger, transport=httpx.MockTransport(handler), sleep=(sleeps.append if sleeps is not None else lambda s: None)
     )
@@ -83,12 +83,12 @@ def test_payload_and_completion_fields():
     out = client.complete(MESSAGES, 128)
     assert seen["url"] == "https://api.example.invalid/v1/chat/completions"
     body = seen["body"]
-    assert body["model"] == "gpt-6-luna" and body["messages"] == MESSAGES
+    assert body["model"] == "test-model" and body["messages"] == MESSAGES
     assert body["max_completion_tokens"] == 128 and body["temperature"] == 0.0 and body["seed"] == 3
     assert body["reasoning_effort"] == "none"
     assert out == mc.Completion(
         text='{"intent": "alarm_set", "slots": []}', prompt_tokens=50, completion_tokens=7,
-        model="gpt-6-luna-2026-09-01", finish_reason="stop", usage_reported=True,
+        model="test-model-2026-09-01", finish_reason="stop", usage_reported=True,
     )
     assert client.sent_params() == ["max_completion_tokens", "reasoning_effort", "seed", "temperature"]
 
@@ -207,7 +207,7 @@ def test_ledger_records_completed_requests(tmp_path):
     client = make_client(lambda r: httpx.Response(200, json=ok_body()), ledger=ledger)
     client.ledger_tag = "hosted_check"
     client.complete(MESSAGES, 8)
-    assert ledger.requests == 1 and ledger.entries[0]["model"] == "gpt-6-luna-2026-09-01"
+    assert ledger.requests == 1 and ledger.entries[0]["model"] == "test-model-2026-09-01"
     assert ledger.entries[0]["tag"] == "hosted_check"
 
 

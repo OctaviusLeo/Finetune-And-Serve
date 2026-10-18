@@ -19,7 +19,7 @@ from scripts.check_traceability import check_traceability
 
 number = st.one_of(st.integers(min_value=0, max_value=10**6).map(str),
                    st.tuples(st.integers(0, 999), st.integers(0, 9999)).map(lambda t: f"{t[0]}.{t[1]:04d}"))
-filler = st.sampled_from(["F1", "is", "and", "P95", "Q4_K_M", "ms", "tokens/s", "seed", "gpt-6-luna", "(95% CI)"])
+filler = st.sampled_from(["F1", "is", "and", "P95", "Q4_K_M", "ms", "tokens/s", "seed", "jev-1.13.0", "(95% CI)"])
 
 
 @settings(max_examples=100, derandomize=True, deadline=None)

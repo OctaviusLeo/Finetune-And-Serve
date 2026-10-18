@@ -2,13 +2,14 @@
 
 Every hosted request in the project is appended to ``results/hosted_ledger.jsonl``.
 Cost per request is ``prompt_tokens * prompt_price + completion_tokens * completion_price``
-(prices per 1M tokens). The prompt price is the higher of the input and
-cache-write rates, so the recorded spend is an upper bound on the bill.
+(prices per 1M tokens). For the hosted Jev baseline the prompt tokens are the
+response's ``usage.input_tokens`` and the completion price is 0 (output is free).
+When a provider also lists a cache-write rate, prompt tokens are charged at the
+higher of the two, so the recorded spend is an upper bound on the bill.
 
-Before each request the caller asks :meth:`SpendLedger.check` whether the
-request's worst case (prompt length estimated from its characters, plus the full
-output budget) still fits under the cap. If not, :class:`SpendCapExceeded` is
-raised and the request is never sent.
+Before each request the caller asks the ledger whether the request's worst case
+(input length estimated from its characters, plus any output budget) still fits
+under the cap. If not, :class:`SpendCapExceeded` is raised and the request is never sent.
 """
 
 from __future__ import annotations
@@ -51,14 +52,20 @@ class Prices:
 
 
 def prices_from_config(cfg: dict) -> Prices:
-    """Prompt tokens at max(input, cache_write); completion tokens at the output rate."""
+    """Prompt tokens at max(input, cache_write if listed); completion tokens at the output rate."""
     p = cfg["prices_usd_per_1m_tokens"]
-    return Prices(prompt_per_mtok=max(float(p["input"]), float(p["cache_write"])), completion_per_mtok=float(p["output"]))
+    prompt = max(float(p["input"]), float(p.get("cache_write", 0.0)))
+    return Prices(prompt_per_mtok=prompt, completion_per_mtok=float(p["output"]))
 
 
 def estimate_prompt_tokens(messages: list[dict]) -> int:
     chars = sum(len(str(m.get("content", ""))) for m in messages)
     return math.ceil(chars / CHARS_PER_TOKEN) + TOKENS_PER_MESSAGE * len(messages)
+
+
+def estimate_text_tokens(text: str) -> int:
+    """Worst-case input tokens of a request body: its characters / 3, rounded up."""
+    return math.ceil(len(text) / CHARS_PER_TOKEN)
 
 
 class SpendLedger:

@@ -1,0 +1,12 @@
+# Question templates for the hosted Jev baseline (design.md "Hosted model and Spend_Cap").
+# State: {"request": <utterance>, "examples": [{"request", "answer"}, ...10 Train_Split exemplars]}.
+intent: >-
+  Which intent does the voice-assistant `request` express? The `examples` show requests labelled with
+  their intent and slots.
+# {span} is replaced by the candidate span, copied verbatim from the request.
+span: >-
+  Span: "{span}". Is this exact span of `request` (these words, no more and no fewer) the complete value
+  of one slot, annotated the way the `examples` annotate slots? If so, which slot type; otherwise none.
+none: >-
+  This exact span is not a complete slot value: it is no slot, only part of a longer slot, or includes
+  extra words.

@@ -1,24 +1,20 @@
-# Hosted baseline (design.md "Hosted model and Spend_Cap").
-provider: openai
-base_url: https://api.openai.com/v1
-model: gpt-6-luna
-api_key_env: OPENAI_API_KEY
-timeout_s: 60
-max_tokens_field: max_completion_tokens
-max_completion_tokens: 128
-temperature: 0
-seed: 0
-extra:
-  reasoning_effort: none
-# Standard prices, USD per 1M tokens. Prompt tokens are charged at max(input, cache_write)
-# and completion tokens at the output rate, so the ledger is an upper bound on the bill.
+# Hosted baseline (design.md "Hosted model and Spend_Cap"): TypeSafe's Jev decision model.
+provider: typesafe
+url: https://api.typesafe.ai/v1/systemone
+# Pinned versioned ID (jev-latest pointed here on 2026-10-18), so alias moves cannot change results.
+model: jev-1.13.0
+api_key_env: TYPESAFE_API_KEY
+timeout_s: 120
+# Slot candidates: every contiguous span of up to this many whitespace tokens of the request.
+max_span_tokens: 6
+# Requests with more span questions than this are split into several requests over the same state.
+max_span_questions_per_request: 100
+# USD per 1M tokens (TypeSafe Models page): input tokens are billed, output tokens are free.
 prices_usd_per_1m_tokens:
-  input: 0.10
-  cached_input: 0.01
-  cache_write: 0.125
-  output: 0.50
-prices_source: https://developers.openai.com/api/docs/pricing
-prices_accessed: "2026-10-17"
+  input: 0.042
+  output: 0.0
+prices_source: https://docs.typesafe.ai/models
+prices_accessed: "2026-10-18"
 # Owner-set Spend_Cap (design.md). No task raises it.
 spend_cap_usd: 2.00
 ledger_path: results/hosted_ledger.jsonl

@@ -3,11 +3,12 @@
 Each baseline predicts every Test example, is scored with the Task_Metric, and
 gets a 95% bootstrap CI. Each records its prompt template(s) and the number of
 Test examples not scored. The local baselines run the Base_Model through
-fts.infer; the hosted baseline sends the same few-shot messages to gpt-6-luna
-through ModelClient and the spend ledger, one request at a time. Hosted
-predictions are appended to a cache as they arrive, so a restarted run resumes
-without paying twice. If the ledger refuses a request, the run stops, reports
-the spend reached and the cap, and exits non-zero.
+fts.infer. The hosted baseline asks TypeSafe's Jev, through JevClient and the
+spend ledger, to select the intent and a slot type per candidate span, with the
+same 10 exemplars in its state (fts.jev_extract), and assembles the task JSON.
+Hosted predictions are appended to a cache as they arrive, so a restarted run
+resumes without re-sending finished examples. If the ledger refuses a request,
+the run stops, reports the spend reached and the cap, and exits non-zero.
 
 ``python -m fts.baselines --baseline local|hosted_few_shot|all`` writes one
 stamped record per baseline to results/baselines/<name>.json and, once all
@@ -24,7 +25,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from fts import data, exemplars, infer, prompts, repro, settings
+from fts import data, exemplars, infer, jev_extract, prompts, repro, settings
 from fts.eval_core import BootstrapCI, bootstrap_ci, split_digest
 from fts.infer import Prediction
 from fts.spend import SpendCapExceeded, SpendLedger
@@ -61,6 +62,8 @@ class BaselineResult:
 def templates_for(name: str) -> str:
     if name == "base_zero_shot":
         return prompts.template_path("system") + ", " + prompts.template_path("zero_shot")
+    if name == "hosted_few_shot":
+        return "config/prompts/jev.yaml, config/labels.json, config/few_shot_exemplars.json"
     return ", ".join([prompts.template_path("system"), prompts.template_path("few_shot"), prompts.template_path("few_shot_turn"), "config/few_shot_exemplars.json"])
 
 
@@ -88,7 +91,6 @@ def message_builders(templates: prompts.Templates, labels: dict, shots: Sequence
     return {
         "base_zero_shot": lambda e: prompts.zero_shot_messages(templates, e.inputs, labels),
         "base_few_shot": lambda e: prompts.few_shot_messages(templates, e.inputs, labels, shots),
-        "hosted_few_shot": lambda e: prompts.few_shot_messages(templates, e.inputs, labels, shots),
     }
 
 
@@ -120,38 +122,65 @@ def _load_cache(path: Path) -> dict[str, dict]:
     return rows
 
 
-def run_hosted(test: Sequence[data.Example], build: Callable[[data.Example], list[dict]], client, ledger: SpendLedger, max_tokens: int, seed: int,
-               cache_path: Path, log: Callable[[str], None] = lambda m: print(m, flush=True)) -> BaselineResult:
-    """Send each Test example once (resuming from ``cache_path``); SpendCapExceeded propagates after the cache is saved."""
+@dataclass(frozen=True)
+class JevPlan:
+    """What the hosted baseline asks Jev (design.md "Hosted model and Spend_Cap")."""
+
+    labels: dict
+    exemplars: Sequence[data.Example]
+    templates: jev_extract.JevTemplates
+    max_span_tokens: int
+    per_request: int
+
+
+def jev_predict(client, example: data.Example, plan: JevPlan) -> dict:
+    """Ask Jev about one request (one or more requests over the same state) and assemble the task JSON."""
+    spans, batches = jev_extract.question_batches(example.inputs, plan.labels, plan.templates, plan.max_span_tokens, plan.per_request)
+    state = jev_extract.build_state(example.inputs, plan.exemplars)
+    answers: dict = {}
+    input_tokens = output_tokens = 0
+    models: set[str] = set()
+    for questions in batches:
+        r = client.ask(state, questions)
+        answers.update(r.answers)
+        input_tokens += r.input_tokens
+        output_tokens += r.output_tokens
+        models.add(r.model)
+    compact = {qid: [a["choice"], round(float(a["probabilities"].get(a["choice"], 0.0)), 4)] for qid, a in answers.items()}
+    return {"example_id": example.example_id, "text": jev_extract.decode(answers, spans), "input_tokens": input_tokens,
+            "output_tokens": output_tokens, "requests": len(batches), "questions": len(spans) + 1, "models": sorted(models), "answers": compact}
+
+
+def run_hosted(test: Sequence[data.Example], client, ledger: SpendLedger, plan: JevPlan, seed: int, cache_path: Path,
+               log: Callable[[str], None] = lambda m: print(m, flush=True)) -> BaselineResult:
+    """Ask Jev about each Test example once (resuming from ``cache_path``); SpendCapExceeded propagates after the cache is saved."""
     cache = _load_cache(cache_path)
     cache_path.parent.mkdir(parents=True, exist_ok=True)
-    models: set[str] = {row["model"] for row in cache.values()}
     start = time.monotonic()
     with cache_path.open("a", encoding="utf-8") as fh:
         for i, ex in enumerate(test):
             if ex.example_id in cache:
                 continue
-            c = client.complete(build(ex), max_tokens)
-            row = {"example_id": ex.example_id, "text": c.text, "prompt_tokens": c.prompt_tokens, "completion_tokens": c.completion_tokens, "model": c.model}
+            row = jev_predict(client, ex, plan)
             fh.write(json.dumps(row, ensure_ascii=False) + "\n")
             fh.flush()
             cache[ex.example_id] = row
-            models.add(c.model)
             if (i + 1) % 100 == 0:
                 log(f"hosted: {i + 1}/{len(test)} done, spend ${ledger.total_usd:.4f} of ${ledger.cap_usd:.2f}")
-    preds = [Prediction(r["example_id"], r["text"], r["prompt_tokens"], r["completion_tokens"]) for r in (cache[e.example_id] for e in test)]
+    rows = [cache[e.example_id] for e in test]
+    preds = [Prediction(r["example_id"], r["text"], r["input_tokens"], r["output_tokens"]) for r in rows]
     path = infer.save_predictions(cache_path.with_name("hosted_few_shot.jsonl"), test, preds)
-    summary = ledger.summary()
     details = {
-        "engine": "OpenAI Chat Completions, one request at a time",
-        "configured_model": client.config.model,
-        "response_models": sorted(models),
-        "params_sent": client.sent_params(max_tokens),
-        "dropped_params": list(client.dropped_params),
-        "prompt_tokens": sum(p.prompt_tokens for p in preds),
-        "completion_tokens": sum(p.completion_tokens for p in preds),
+        "engine": "TypeSafe Jev over HTTP: intent choice plus one slot-type choice per candidate span, assembled in code",
+        "configured_model": client.model,
+        "response_models": sorted({m for r in rows for m in r["models"]}),
+        "max_span_tokens": plan.max_span_tokens,
+        "requests": sum(r["requests"] for r in rows),
+        "questions": sum(r["questions"] for r in rows),
+        "input_tokens": sum(r["input_tokens"] for r in rows),
+        "output_tokens": sum(r["output_tokens"] for r in rows),
         "seconds_this_session": round(time.monotonic() - start, 1),
-        "ledger": summary,
+        "ledger": ledger.summary(),
     }
     return evaluate("hosted_few_shot", test, preds, seed, spend_usd=_baseline_spend(ledger), predictions_path=_rel(path), details=details)
 
@@ -162,15 +191,20 @@ def _baseline_spend(ledger: SpendLedger) -> float:
 
 
 def run_baselines(splits: data.Splits, few_shot_exemplars: Sequence[data.Example], spend_cap_usd: float, seed: int, *,
-                  engine: LocalEngine, client, ledger: SpendLedger, labels: dict, templates: prompts.Templates, max_tokens: int,
+                  engine: LocalEngine, client, ledger: SpendLedger, labels: dict, templates: prompts.Templates, plan: JevPlan,
                   cache_path: Path, predictions_dir: Path = infer.PREDICTIONS_DIR) -> list[BaselineResult]:
     """All three baselines on the Test_Split (design.md interface); the hosted client must use ``ledger``."""
     if abs(ledger.cap_usd - spend_cap_usd) > 1e-12:
         raise ValueError(f"ledger cap {ledger.cap_usd} differs from spend_cap_usd {spend_cap_usd}")
     builders = message_builders(templates, labels, few_shot_exemplars)
     results = [run_local(n, splits.test, builders[n], engine, seed, predictions_dir) for n in ("base_zero_shot", "base_few_shot")]
-    results.append(run_hosted(splits.test, builders["hosted_few_shot"], client, ledger, max_tokens, seed, cache_path))
+    results.append(run_hosted(splits.test, client, ledger, plan, seed, cache_path))
     return results
+
+
+def plan_from_config(cfg: dict, labels: dict, shots: Sequence[data.Example], templates_path: Path) -> JevPlan:
+    return JevPlan(labels=labels, exemplars=tuple(shots), templates=jev_extract.load_templates(templates_path),
+                   max_span_tokens=int(cfg["max_span_tokens"]), per_request=int(cfg["max_span_questions_per_request"]))
 
 
 def write_result(result: BaselineResult, stamp: repro.Stamp, results_dir: Path = RESULTS_DIR) -> Path:
@@ -252,10 +286,10 @@ def main(argv: list[str] | None = None, root: Path = REPO_ROOT, engine: LocalEng
         except MissingSecretError as exc:
             print(f"FAIL: {exc}; no hosted request was sent", file=sys.stderr)
             return 2
+        plan = plan_from_config(hosted_cfg, labels, shots, root / "config" / "prompts" / "jev.yaml")
         with client:
             try:
-                result = run_hosted(splits.test, builders["hosted_few_shot"], client, ledger, int(hosted_cfg["max_completion_tokens"]), SEED,
-                                    predictions_dir / "hosted_few_shot.cache.jsonl")
+                result = run_hosted(splits.test, client, ledger, plan, SEED, predictions_dir / "hosted_few_shot.cache.jsonl")
             except SpendCapExceeded as exc:
                 print(f"FAIL: {exc}. Spend reached ${exc.spent_usd:.6f}; cap ${exc.cap_usd:.2f}.", file=sys.stderr)
                 return 1

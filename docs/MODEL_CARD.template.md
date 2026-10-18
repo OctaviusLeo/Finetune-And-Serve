@@ -29,7 +29,7 @@ Field-level F1 over the multiset of (intent) and (slot type, value) pairs, in th
 
 - Fine-tuned, mean ± standard deviation over {{n_final_seeds}} seeds: {{f1_ft_mean}} ± {{f1_ft_spread}}; the serving seed scores {{f1_ft_serving}}.
 - Served through llama-server: GGUF F16 {{f1_f16}}, GGUF Q4_K_M {{f1_q4}}.
-- Baselines on the same Test_Split: base model zero-shot {{f1_zero_shot}}, few-shot {{f1_few_shot}}, `{{hosted_model}}` few-shot {{f1_hosted}}.
+- Baselines on the same Test_Split: base model zero-shot {{f1_zero_shot}}, few-shot {{f1_few_shot}}, TypeSafe Jev (`{{hosted_model}}`) few-shot {{f1_hosted}}.
 
 {{summary_sweep}}
 

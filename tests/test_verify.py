@@ -29,9 +29,8 @@ def write_m0_root(root, *, passed=True, peak=9000, spent_tokens=1000):
     envdoc.replace_section("Python environment", envrecord.render_environment(
         rows, "Name: torch", {"torch": "2.14.1", "cuda_runtime": "13.0", "cudnn": 1, "cuda_available": True}, "uv 0.13", "3.12", STAMP), env)
     hcfg = settings.load_yaml(root / "config" / "hosted.yaml")
-    check = {"response_model": "gpt-6-luna-x", "text": "OK", "accepted_params": ["seed"], "dropped_params": [], "prompt_tokens": 30,
-             "completion_tokens": 2, "cost_usd": 1e-5}
-    summary = {"prompt_price_per_mtok": 0.125, "completion_price_per_mtok": 0.5, "spend_usd": 1e-5, "requests": 1}
+    check = {"response_model": "jev-1.13.0", "answer": 0.98, "input_tokens": 60, "output_tokens": 12, "cost_usd": 2.52e-6}
+    summary = {"prompt_price_per_mtok": 0.042, "completion_price_per_mtok": 0.0, "spend_usd": 2.52e-6, "requests": 1}
     envdoc.replace_section("Hosted model and Spend_Cap", hosted.render_section(hcfg, check, summary, STAMP), env)
     repro.write_json(root / "results" / "dry_run.json", dry_run.result_payload(cfg, result), STAMP)
     repro.write_json(root / "results" / "hosted_check.json", {"check": check}, STAMP)
