@@ -216,7 +216,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - **Property 5: Bootstrap CI brackets the point estimate** — `lower <= point <= upper`; same seed yields an identical interval within 1e-6.
   - **Validates: Requirements 3.2, 5.1, 5.7**
 
-- [ ] 2.9 Implement local inference, the prompt templates, and the exemplar selector
+- [x] 2.9 Implement local inference, the prompt templates, and the exemplar selector
   - `fts/infer.py` does batched greedy generation with `transformers` exactly as design.md's "Local inference" describes, optionally with a `peft` Adapter, and saves per-example predictions under `runs/predictions/`. Malformed gold examples are reported as "not scored" with their cause, and the rest continue.
   - Write `config/prompts/system.txt`, `finetune.txt`, `zero_shot.txt`, and `few_shot.txt` as design.md describes.
   - Write `scripts/select_exemplars.py`, and run it to produce `config/few_shot_exemplars.json` (10 Train_Split exemplars, seed 0, distinct scenarios).

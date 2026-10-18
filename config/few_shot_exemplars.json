@@ -1,0 +1,76 @@
+{
+  "seed": 0,
+  "method": "random.Random(seed).shuffle of the Train_Split; first example of each distinct scenario (intent prefix)",
+  "exemplars": [
+    {
+      "id": "14860",
+      "partition": "train",
+      "scenario": "qa",
+      "utt": "convert the american dollar to the euro",
+      "target": "{\"intent\": \"qa_currency\", \"slots\": [{\"type\": \"currency_name\", \"value\": \"american dollar\"}, {\"type\": \"currency_name\", \"value\": \"euro\"}]}"
+    },
+    {
+      "id": "3168",
+      "partition": "train",
+      "scenario": "iot",
+      "utt": "can you turn my bathroom lights off",
+      "target": "{\"intent\": \"iot_hue_lightoff\", \"slots\": [{\"type\": \"house_place\", \"value\": \"bathroom\"}]}"
+    },
+    {
+      "id": "11687",
+      "partition": "train",
+      "scenario": "recommendation",
+      "utt": "will the fast food shop at the corner open today",
+      "target": "{\"intent\": \"recommendation_locations\", \"slots\": [{\"type\": \"food_type\", \"value\": \"fast food\"}, {\"type\": \"business_type\", \"value\": \"shop\"}, {\"type\": \"date\", \"value\": \"today\"}]}"
+    },
+    {
+      "id": "8128",
+      "partition": "train",
+      "scenario": "music",
+      "utt": "give me the details on elton john",
+      "target": "{\"intent\": \"music_query\", \"slots\": [{\"type\": \"artist_name\", \"value\": \"elton john\"}]}"
+    },
+    {
+      "id": "11100",
+      "partition": "train",
+      "scenario": "lists",
+      "utt": "enter this to a list",
+      "target": "{\"intent\": \"lists_createoradd\", \"slots\": []}"
+    },
+    {
+      "id": "4670",
+      "partition": "train",
+      "scenario": "takeaway",
+      "utt": "does this restaurant only do carry-out",
+      "target": "{\"intent\": \"takeaway_query\", \"slots\": [{\"type\": \"business_type\", \"value\": \"restaurant\"}, {\"type\": \"order_type\", \"value\": \"carry-out\"}]}"
+    },
+    {
+      "id": "7651",
+      "partition": "train",
+      "scenario": "calendar",
+      "utt": "set this before event",
+      "target": "{\"intent\": \"calendar_set\", \"slots\": []}"
+    },
+    {
+      "id": "15856",
+      "partition": "train",
+      "scenario": "email",
+      "utt": "send email to current email address",
+      "target": "{\"intent\": \"email_sendemail\", \"slots\": []}"
+    },
+    {
+      "id": "72",
+      "partition": "train",
+      "scenario": "play",
+      "utt": "start playing music from favorites",
+      "target": "{\"intent\": \"play_music\", \"slots\": []}"
+    },
+    {
+      "id": "12426",
+      "partition": "train",
+      "scenario": "transport",
+      "utt": "what are the train times between eight am and ten am at east chicago station going west on sunday",
+      "target": "{\"intent\": \"transport_query\", \"slots\": [{\"type\": \"transport_type\", \"value\": \"train\"}, {\"type\": \"time\", \"value\": \"eight am\"}, {\"type\": \"time\", \"value\": \"ten am\"}, {\"type\": \"place_name\", \"value\": \"east chicago station\"}, {\"type\": \"place_name\", \"value\": \"west\"}, {\"type\": \"date\", \"value\": \"sunday\"}]}"
+    }
+  ]
+}
