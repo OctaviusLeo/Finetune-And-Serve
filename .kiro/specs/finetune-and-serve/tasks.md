@@ -430,7 +430,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Run `scripts/build_docs.py`, then `scripts/check_traceability.py`, which must pass.
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 9.6, 10.1, 10.2, 10.3, 10.4, 0.11_
 
-- [ ] 6.9 **Automated gate (end to end):** run `bash scripts/verify_m5.sh`, which runs `bash scripts/test_unit.sh`, the full `pytest`, `python -m fts.smoke_eval`, and `scripts/check_traceability.py`, and checks:
+- [x] 6.9 **Automated gate (end to end):** run `bash scripts/verify_m5.sh`, which runs `bash scripts/test_unit.sh`, the full `pytest`, `python -m fts.smoke_eval`, and `scripts/check_traceability.py`, and checks:
   - `results/summary.md` has every section design.md lists, with CIs and stamps;
   - both plots exist;
   - `README.md` and `MODEL_CARD.md` exist;
