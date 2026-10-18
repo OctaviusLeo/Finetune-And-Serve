@@ -265,7 +265,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Write `docs/SWEEP_RATIONALE.md` with design.md's rationale before any sweep Run.
   - _Requirements: 4.3, 4.4, 4.5_
 
-- [ ] 3.4 Write unit tests for sweep selection and the seed-count guard
+- [x] 3.4 Write unit tests for sweep selection and the seed-count guard
   - Test that `run_sweep` selects the config with the best Validation metric (and breaks ties as documented), that `run_final_seeds` enforces 3 distinct seeds, and the serving-seed rule.
   - _Requirements: 4.3, 4.4, 4.5_
 
