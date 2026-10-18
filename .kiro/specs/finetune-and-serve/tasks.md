@@ -323,7 +323,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Re-run it for the serving seed. The predictions must be identical and the metrics equal within 1e-6. If any prediction differs, record the differing ids in `docs/ENVIRONMENT.md` as GPU-kernel nondeterminism (Req 0.3's exclusion) and require only the scoring of identical predictions to match.
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.7_
 
-- [ ] 4.8 **Automated gate (M3):** run `bash scripts/verify_m3.sh`, which runs `bash scripts/test_unit.sh` and the full `pytest`, and checks:
+- [x] 4.8 **Automated gate (M3):** run `bash scripts/verify_m3.sh`, which runs `bash scripts/test_unit.sh` and the full `pytest`, and checks:
   - `results/finetuned.json` has three seeds with CIs in [0, 1], a mean, a spread, and stamps;
   - its Test ids match those of `results/baselines.json`;
   - `results/error_analysis.json` group counts sum to the analyzed total, which is at least 50 when 50 failures exist.
