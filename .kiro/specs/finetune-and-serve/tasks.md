@@ -395,7 +395,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Test that regenerating produces the file, that a CI appears for every reported quality metric, and that every section carries a stamp.
   - _Requirements: 10.1, 10.2_
 
-- [ ] 6.3 Implement the README/Model_Card traceability check
+- [x] 6.3 Implement the README/Model_Card traceability check
   - Write `scripts/check_traceability.py` with `check_traceability(doc_path, generated_sources)`, which scans every numeric token in `README.md` and `MODEL_CARD.md` (URLs excluded) and reports each one not found in the generated sources listed in design.md, exiting with a failed status when any exist.
   - _Requirements: 10.4, 10.5_
 
