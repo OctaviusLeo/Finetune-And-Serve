@@ -8,12 +8,12 @@ Exact versions of every tool, library, API and model this project relies on, eac
 - Python: `3.12.3` (Linux-6.18.54.1-microsoft-standard-WSL2-x86_64-with-glibc2.39)
 - Command: `python scripts/dry_run.py`
 - Seed: `0`
-- Commit: `de2a2a64073249a5a254f4b5c5077935ee5a46ca`
+- Commit: `f855c93c8b34d23182093943a50ae5d8ef643543`
 
 `nvidia-smi` output captured by the Dry_Run:
 
 ```text
-Sat Oct 17 21:08:50 2026       
+Sat Oct 17 22:18:36 2026       
 +-----------------------------------------------------------------------------------------+
 | NVIDIA-SMI 615.78.05              KMD Version: 617.42        CUDA UMD Version: 13.4     |
 +-----------------------------------------+------------------------+----------------------+
@@ -22,7 +22,7 @@ Sat Oct 17 21:08:50 2026
 |                                         |                        |               MIG M. |
 |=========================================+========================+======================|
 |   0  NVIDIA GeForce RTX 3080        On  |   00000000:2B:00.0  On |                  N/A |
-| 36%   62C    P0            192W /  368W |    2410MiB /  10240MiB |     30%      Default |
+| 30%   57C    P0            141W /  368W |    3338MiB /  10240MiB |      0%      Default |
 |                                         |                        |                  N/A |
 +-----------------------------------------+------------------------+----------------------+
 
@@ -33,7 +33,6 @@ Sat Oct 17 21:08:50 2026
 |=========================================================================================|
 |    0   N/A  N/A              27      G   /Xwayland                             N/A      |
 |    0   N/A  N/A              58      G   /Xwayland                             N/A      |
-|    0   N/A  N/A           25164      C   /python3.12                           N/A      |
 +-----------------------------------------------------------------------------------------+
 ```
 
@@ -112,12 +111,13 @@ Required-by: finetune-and-serve, peft
 - Optimizer steps: 20 (AdamW, learning rate 0.0002)
 - Trainable parameters: 18464768 of 1562179072
 - Peak GPU memory, `torch.cuda.max_memory_reserved()`: **9326 MiB**
-- Peak GPU memory, `nvidia-smi` sampled once per second (whole GPU): **10038 MiB**
+- Peak GPU memory, `nvidia-smi` sampled once per second (whole GPU): **10020 MiB**
 - `nvidia-smi` total: **10240 MiB**
-- Wall time: 649.0 s
+- Other programs held 2410 MiB before the run (`runs/gpu_idle_mib.txt`); torch peak reserved + that = 11736 MiB vs total 10240 MiB: exceeds dedicated VRAM; under WSL2 the excess is served from shared system memory, which slows the job but does not fail it
+- Wall time: 169.5 s
 - Command: `python scripts/dry_run.py`
 - Seed: `0`
-- Commit: `de2a2a64073249a5a254f4b5c5077935ee5a46ca`
+- Commit: `f855c93c8b34d23182093943a50ae5d8ef643543`
 
 ## Hosted model and Spend_Cap
 
