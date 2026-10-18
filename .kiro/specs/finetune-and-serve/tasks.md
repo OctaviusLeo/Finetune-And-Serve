@@ -208,7 +208,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Unit tests: design.md's hand-computed example (F1 = 0.8) asserted within 1e-6; invalid JSON scores 0; duplicate slots counted with multiplicity.
   - **Validates: Requirements 2.1, 3.2, 5.1** _Requirements: 9.1, 9.5_
 
-- [ ] 2.7 Implement the bootstrap confidence interval
+- [x] 2.7 Implement the bootstrap confidence interval
   - `fts/eval_core.py` defines `BootstrapCI` and `bootstrap_ci` (≥1000 resamples, 95% percentile interval, deterministic under a fixed seed).
   - _Requirements: 3.2, 5.1_
 
