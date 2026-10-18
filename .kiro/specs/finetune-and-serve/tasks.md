@@ -242,7 +242,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Commit and check the GPU is free. Then run, detached and one after another: the two local baselines, then the hosted baseline. Write `results/baselines.json` (stamped) with each metric, CI, template path, not-scored count, and the hosted spend versus the cap.
   - _Requirements: 3.1, 3.2, 3.3, 0.1_
 
-- [ ] 2.14 **Automated gate (M1):** run `bash scripts/verify_m1.sh`, which runs `bash scripts/test_unit.sh` and the full `pytest`, rebuilds the splits under `runs/` and confirms identical membership and targets, re-runs the overlap check, and checks:
+- [x] 2.14 **Automated gate (M1):** run `bash scripts/verify_m1.sh`, which runs `bash scripts/test_unit.sh` and the full `pytest`, rebuilds the splits under `runs/` and confirms identical membership and targets, re-runs the overlap check, and checks:
   - `results/data_counts.json` holds the three split counts and the excluded count;
   - `results/baselines.json` holds three baselines with CIs inside [0, 1] and stamps;
   - the hosted spend is at most the Spend_Cap.
