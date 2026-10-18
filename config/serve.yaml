@@ -1,0 +1,19 @@
+# Serving_Endpoint (design.md "Quantization and serving runtime").
+# llama.cpp images, both pinned to the same build: full-<build> converts and quantizes, server-cuda12-<build> serves.
+llama_cpp_build: b11580
+full_image: ghcr.io/ggml-org/llama.cpp:full-b11580
+server_image: ghcr.io/ggml-org/llama.cpp:server-cuda12-b11580
+models:
+  f16: ft-f16.gguf
+  q4: ft-q4_k_m.gguf
+# OpenAI-compatible client settings for the local server.
+base_url: http://127.0.0.1:8080/v1
+health_url: http://127.0.0.1:8080/health
+model: fts-ft
+timeout_s: 60
+max_tokens_field: max_tokens
+temperature: 0
+seed: 0
+# With require_api_key: true, scripts/serve.sh refuses to start unless FTS_SERVE_API_KEY is set.
+require_api_key: false
+api_key_env: FTS_SERVE_API_KEY

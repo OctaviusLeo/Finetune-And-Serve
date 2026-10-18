@@ -331,7 +331,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
 
 ## M4 — Quantization, serving, and load test
 
-- [ ] 5.1 Implement the quantizer
+- [x] 5.1 Implement the quantizer
   - `fts/quantize.py` defines `QuantizedModel` and `quantize`, which do the following:
     - merge the serving seed's Adapter into the bf16 Base_Model and save it with its tokenizer to `~/fts-artifacts/models/merged/`;
     - convert it to `ft-f16.gguf` and quantize it to `ft-q4_k_m.gguf` with the pinned llama.cpp `full-b<build>` image (`--convert`, `--quantize`), mounted at `~/fts-artifacts/models`;
