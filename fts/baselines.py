@@ -186,8 +186,8 @@ def run_hosted(test: Sequence[data.Example], client, ledger: SpendLedger, plan: 
 
 
 def _baseline_spend(ledger: SpendLedger) -> float:
-    """Spend of the hosted baseline itself (ledger entries tagged hosted_few_shot)."""
-    return sum(ledger.prices.cost(e["prompt_tokens"], e["completion_tokens"]) for e in ledger.entries if e.get("tag") == "hosted_few_shot")
+    """Spend of the hosted baseline itself (ledger entries tagged hosted_few_shot, including unconfirmed attempts)."""
+    return sum(ledger.prices.cost(e["prompt_tokens"], e["completion_tokens"]) for e in ledger.entries if str(e.get("tag", "")).startswith("hosted_few_shot"))
 
 
 def run_baselines(splits: data.Splits, few_shot_exemplars: Sequence[data.Example], spend_cap_usd: float, seed: int, *,

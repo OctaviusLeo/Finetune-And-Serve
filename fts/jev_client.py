@@ -10,7 +10,10 @@ the ``model`` version that answered, and ``usage.input_tokens`` /
   request when it is unset or empty;
 * enforces a per-request timeout;
 * retries HTTP 429, 529 and 5xx with exponential backoff (``retry-after`` honoured),
-  up to ``max_attempts`` in total;
+  and transient transport errors (dropped connections, timeouts), up to
+  ``max_attempts`` in total. A failed attempt that may have reached the server is
+  charged to the ledger at its worst case (tag ``<tag>:unconfirmed``), so the
+  ledger stays an upper bound on the bill;
 * with a :class:`~fts.spend.SpendLedger`, refuses a request whose worst-case cost
   (request body characters / 3 input tokens) could cross the Spend_Cap, and
   records every completed request;
@@ -91,9 +94,15 @@ class JevClient:
             attempt += 1
             try:
                 response = self._http.post(self.url, headers=headers, content=body.encode("utf-8"))
-            except httpx.TimeoutException as exc:
-                raise ModelTimeoutError(f"Jev request timed out after {self.timeout_s} s") from exc
             except httpx.TransportError as exc:
+                if not isinstance(exc, (httpx.ConnectError, httpx.ConnectTimeout)) and self.ledger is not None:
+                    # The request may have reached the server and been billed: charge its worst case.
+                    self.ledger.record(estimate_text_tokens(body), 0, self.model, f"{self.ledger_tag}:unconfirmed")
+                if attempt < self.max_attempts:
+                    self._sleep(self.backoff_s * 2 ** (attempt - 1))
+                    continue
+                if isinstance(exc, httpx.TimeoutException):
+                    raise ModelTimeoutError(f"Jev request timed out after {self.timeout_s} s") from exc
                 raise ModelConnectionError(f"cannot reach {self.url}: {type(exc).__name__}") from exc
             if response.status_code in RETRYABLE_STATUS and attempt < self.max_attempts:
                 self._sleep(self._backoff(response, attempt))

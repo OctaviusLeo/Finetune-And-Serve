@@ -113,3 +113,35 @@ def test_client_from_config(monkeypatch):
     monkeypatch.setenv("TYPESAFE_API_KEY", "ts-secret")
     c = jev_client.client_from_config(hosted.load_config(), ledger_tag="x")
     assert c.model == "jev-1.13.0" and c.url == "https://api.typesafe.ai/v1/systemone" and c.timeout_s == 120.0 and c.ledger_tag == "x"
+
+
+def test_dropped_connection_is_retried_and_charged_as_unconfirmed(monkeypatch, tmp_path):
+    ledger = spend.SpendLedger(tmp_path / "l.jsonl", cap_usd=1.0, prices=spend.Prices(0.042, 0.0))
+    outcomes = ["read", "ok"]
+
+    def handler(request):
+        if outcomes.pop(0) == "read":
+            raise httpx.ReadError("connection reset", request=request)
+        return ok(input_tokens=500)
+
+    sleeps = []
+    client = make(handler, monkeypatch, ledger=ledger, sleeps=sleeps, ledger_tag="hosted_few_shot")
+    assert client.ask(STATE, QUESTIONS).input_tokens == 500
+    tags = [e["tag"] for e in ledger.entries]
+    assert tags == ["hosted_few_shot:unconfirmed", "hosted_few_shot"] and sleeps == [1.0]
+    worst = spend.estimate_text_tokens(client.body(STATE, QUESTIONS))
+    assert ledger.entries[0]["prompt_tokens"] == worst
+
+
+def test_connect_error_is_retried_without_a_charge(monkeypatch, tmp_path):
+    ledger = spend.SpendLedger(tmp_path / "l.jsonl", cap_usd=1.0, prices=spend.Prices(0.042, 0.0))
+    outcomes = ["connect", "ok"]
+
+    def handler(request):
+        if outcomes.pop(0) == "connect":
+            raise httpx.ConnectError("refused", request=request)
+        return ok()
+
+    client = make(handler, monkeypatch, ledger=ledger)
+    client.ask(STATE, QUESTIONS)
+    assert [e["tag"] for e in ledger.entries] == [""]
