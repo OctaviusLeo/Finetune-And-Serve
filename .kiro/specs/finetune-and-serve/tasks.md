@@ -154,7 +154,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - **Property 7: Hosted-baseline spend-cap enforcement** — reported spend equals the formula over completed requests and never exceeds the cap; the request that would cross it is not sent.
   - **Validates: Requirements 3.3, 3.4**
 
-- [ ] 1.6 Run the Dry_Run and the hosted API proof, and record the environment
+- [x] 1.6 Run the Dry_Run and the hosted API proof, and record the environment
   - With nothing of this project running, record the idle `nvidia-smi --query-gpu=memory.used` reading in `runs/gpu_idle_mib.txt` (the GPU-free check in design.md compares against it). If the reading is above 3,072 MiB, another program is holding GPU memory: wait in 5-minute steps for up to 20 minutes for it to drop, and record a blocker if it doesn't. Then run `scripts/dry_run.py` detached and poll it. Confirm that the measured peak GPU memory is at most the `nvidia-smi` total. If it is over, follow design.md's VRAM fallback and record the reason.
   - Write and run `scripts/hosted_check.py`: one request through `JevClient` and the ledger to Jev (`jev-1.13.0`). Record the returned `model` field, the answer, the token counts, and the cost.
   - Record in `docs/ENVIRONMENT.md`, each with a verifiable artifact:
@@ -164,7 +164,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Record the Base_Model and every library's license in `THIRD_PARTY.md`.
   - _Requirements: 1.4, 1.6, 1.7, 1.8, 0.5, 0.6, 0.7_
 
-- [ ] 1.7 **Automated gate (M0):** run `bash scripts/verify_m0.sh`, which checks:
+- [x] 1.7 **Automated gate (M0):** run `bash scripts/verify_m0.sh`, which checks:
   - `docs/ENVIRONMENT.md` holds the `nvidia-smi` capture with total MiB, a peak VRAM at or below the total, the PEFT method, the sequence length, the batch size, the model revision and license, the library versions, the hosted check, and the Spend_Cap, with stamps;
   - `results/hosted_ledger.jsonl` totals at most the cap;
   - `.gitignore` and `.gitattributes` hold the design's entries;
