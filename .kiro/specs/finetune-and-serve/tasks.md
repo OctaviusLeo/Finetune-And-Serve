@@ -181,7 +181,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
     - A report of utterance texts shared across splits.
   - _Requirements: 2.3, 2.4, 2.5, 2.6_
 
-- [ ] 2.2 Write property test for split disjointness and overlap reporting
+- [x] 2.2 Write property test for split disjointness and overlap reporting
   - **Property 1: Split disjointness and overlap reporting** — splits pairwise disjoint; injected overlap reported exactly with the correct count.
   - **Validates: Requirements 2.3, 2.4** _Requirements: 9.1_
 
