@@ -277,7 +277,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Commit, check the GPU is free, then run the sweep detached and poll it. Write `results/sweep.json` (stamped) with each config's Validation F1, the selected Final_Configuration, and the rationale path.
   - _Requirements: 4.3, 4.4, 0.1_
 
-- [ ] 3.7 Run the final seeds
+- [x] 3.7 Run the final seeds
   - Run seeds 2 and 3 of the Final_Configuration detached and poll them. Write `results/final_runs.json` (stamped) with the three RunRecords and the serving seed.
   - _Requirements: 4.2, 4.5_
 
