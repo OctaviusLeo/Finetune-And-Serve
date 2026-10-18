@@ -298,7 +298,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - `fts/eval_core.py` adds `evaluate` and `SeedSummary`. It computes each final seed's Test_Split F1 with a 95% CI through `fts/infer.py`, using the same Test_Split and metric as the baselines. It also computes the mean and sample standard deviation across seeds, and reports malformed Test examples as "not scored" with their cause.
   - _Requirements: 5.1, 5.2, 5.3, 5.8_
 
-- [ ] 4.2 Write unit tests for evaluator resilience and determinism
+- [x] 4.2 Write unit tests for evaluator resilience and determinism
   - Test the malformed-Test "not scored" path, that re-running with the same seed and fixed predictions gives equal values within 1e-6, and the seed-summary mean and spread on a fixed fixture.
   - _Requirements: 5.3, 5.7, 5.8_
 

@@ -49,3 +49,58 @@ def test_invalid_arguments(kwargs):
 
 def test_as_dict():
     assert BootstrapCI(0.5, 0.4, 0.6).as_dict() == {"point": 0.5, "lower": 0.4, "upper": 0.6}
+
+
+# --- evaluator and seed summary (task 4.2; Req 5.3, 5.7, 5.8) -------------------------------
+
+from fts import data as _data  # noqa: E402
+from fts import eval_core  # noqa: E402
+from fts.infer import Prediction  # noqa: E402
+
+GOLD = '{"intent": "alarm_set", "slots": [{"type": "time", "value": "five am"}]}'
+TEST = (
+    _data.Example("1", "test", "a", GOLD),
+    _data.Example("2", "test", "b", "this gold is malformed"),
+    _data.Example("3", "test", "c", GOLD),
+)
+PREDS = [Prediction("1", GOLD, 10, 5), Prediction("2", GOLD, 10, 5), Prediction("3", '{"intent": "alarm_set", "slots": []}', 10, 5)]
+
+
+def test_malformed_test_example_is_not_scored_and_the_rest_continue():
+    r = eval_core.evaluate_predictions("B-seed1", 1, TEST, PREDS, bootstrap_seed=0)
+    assert r.scored == 2 and r.n_test == 3
+    assert r.not_scored == [{"id": "2", "cause": "gold target is missing or not valid task JSON"}]
+    assert r.per_example == {"1": 1.0, "3": pytest.approx(2 / 3)}
+    assert r.metric.point == pytest.approx((1.0 + 2 / 3) / 2)
+    d = r.to_dict()
+    assert d["not_scored"] == 1 and d["metric"]["point"] == r.metric.point and d["test_ids_sha256"] == eval_core.split_digest(TEST)
+
+
+def test_same_seed_and_predictions_give_equal_values():
+    a = eval_core.evaluate_predictions("B-seed1", 1, TEST, PREDS, bootstrap_seed=5)
+    b = eval_core.evaluate_predictions("B-seed1", 1, TEST, PREDS, bootstrap_seed=5)
+    for x, y in ((a.metric.point, b.metric.point), (a.metric.lower, b.metric.lower), (a.metric.upper, b.metric.upper)):
+        assert abs(x - y) <= 1e-6
+
+
+def test_evaluate_uses_the_predictor_on_the_test_split_only():
+    class Run:
+        run_id, config = "B-seed2", type("C", (), {"seed": 2})()
+
+    splits = _data.Splits((), (), TEST)
+    seen = []
+    r = eval_core.evaluate(Run(), splits, seed=0, predict=lambda run, test: seen.append((run.run_id, len(test))) or PREDS)
+    assert seen == [("B-seed2", 3)] and r.seed == 2 and r.run_id == "B-seed2"
+
+
+def test_no_scorable_examples_raises():
+    with pytest.raises(ValueError):
+        eval_core.evaluate_predictions("x", 1, TEST[1:2], PREDS[1:2], bootstrap_seed=0)
+
+
+def test_seed_summary_mean_and_sample_std_on_fixture():
+    s = eval_core.seed_summary({3: 0.80, 1: 0.90, 2: 0.85})
+    assert list(s.per_seed) == [1, 2, 3]
+    assert s.mean == pytest.approx(0.85) and s.spread == pytest.approx(0.05)  # sample std of (0.90, 0.85, 0.80)
+    with pytest.raises(ValueError):
+        eval_core.seed_summary({1: 0.9})
