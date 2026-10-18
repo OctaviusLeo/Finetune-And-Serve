@@ -269,7 +269,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Test that `run_sweep` selects the config with the best Validation metric (and breaks ties as documented), that `run_final_seeds` enforces 3 distinct seeds, and the serving-seed rule.
   - _Requirements: 4.3, 4.4, 4.5_
 
-- [ ] 3.5 Implement the training determinism check
+- [x] 3.5 Implement the training determinism check
   - Write `scripts/check_train_determinism.py`, which runs the Final_Configuration twice for 30 optimizer steps with the same seed and compares every logged loss value within 1e-6. On a mismatch it reports the values, the largest difference, and the nondeterministic kernels named by PyTorch's warn-only messages, and records them in `docs/ENVIRONMENT.md`. A mismatch with no named nondeterministic kernel exits non-zero.
   - _Requirements: 4.6, 0.3, 0.4_
 
