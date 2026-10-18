@@ -43,6 +43,22 @@ def set_determinism(seed: int) -> None:
     torch.backends.cudnn.benchmark = False
 
 
+def limit_cuda_memory(fraction: float | None) -> bool:
+    """Cap this process's CUDA caching allocator at ``fraction`` of device memory; True when a cap was set.
+
+    Under WSL2 an allocation beyond dedicated VRAM spills into shared system
+    memory (slow) instead of failing, so without a cap the allocator's cache can
+    grow past the card when batch shapes vary. With the cap it frees cached
+    blocks first, and only a genuine need above the cap raises out-of-memory.
+    """
+    import torch
+
+    if not fraction or not torch.cuda.is_available():
+        return False
+    torch.cuda.set_per_process_memory_fraction(fraction)
+    return True
+
+
 def torch_dtype(name: str) -> Any:
     import torch
 

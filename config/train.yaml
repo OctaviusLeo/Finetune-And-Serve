@@ -8,6 +8,11 @@ max_seq_len: 256
 # 1.2-2.4 GB the desktop holds leaves no headroom. Halved batch, doubled accumulation: effective batch stays 16.
 per_device_batch_size: 4
 grad_accum: 4
+# Cap on this process's CUDA caching allocator (fraction of device memory), set 2026-10-18. Under WSL2 an allocation
+# beyond dedicated VRAM silently spills into shared system memory instead of failing: with variable-length batches the
+# allocator's cache grew past the card and the first Run slowed from about 1.5 to 7.6 s per optimizer step after step
+# 200. With the cap the allocator frees cached blocks instead of growing. It changes memory use, not the computation.
+cuda_memory_fraction: 0.75
 epochs: 2
 warmup_ratio: 0.03
 lr_scheduler: linear

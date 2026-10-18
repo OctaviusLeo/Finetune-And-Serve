@@ -29,7 +29,7 @@ from typing import Any
 from fts import infer, prompts, repro, settings
 from fts.data import Example, Splits
 from fts.eval_core import bootstrap_ci
-from fts.lora import LoraSpec, apply_lora, count_parameters, set_determinism
+from fts.lora import LoraSpec, apply_lora, count_parameters, limit_cuda_memory, set_determinism
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ARTIFACTS = Path(os.environ.get("FTS_ARTIFACTS", Path.home() / "fts-artifacts"))
@@ -211,6 +211,8 @@ class PEFTTrainer:
 
     def build_model(self, config: TrainConfig) -> Any:
         set_determinism(config.seed)
+        if self.device.startswith("cuda"):
+            limit_cuda_memory(self.ts.cuda_memory_fraction)
         spec = LoraSpec(r=config.lora_r, alpha=config.lora_alpha, dropout=self.ts.lora_dropout, target_modules=self.ts.target_modules)
         return apply_lora(self.model_factory(self.model_settings, self.device), spec, self.ts.gradient_checkpointing)
 

@@ -52,6 +52,7 @@ class TrainSettings:
     lora_dropout: float
     max_grad_norm: float
     weight_decay: float
+    cuda_memory_fraction: float | None
     target_modules: tuple[str, ...]
     gradient_checkpointing: bool
     logging_steps: int
@@ -85,6 +86,7 @@ def load_train_settings(path: Path | str = TRAIN_YAML) -> TrainSettings:
         lora_dropout=float(d["lora_dropout"]),
         max_grad_norm=float(d["max_grad_norm"]),
         weight_decay=float(d["weight_decay"]),
+        cuda_memory_fraction=float(d["cuda_memory_fraction"]) if d.get("cuda_memory_fraction") is not None else None,
         target_modules=tuple(d["target_modules"]),
         gradient_checkpointing=bool(d["gradient_checkpointing"]),
         logging_steps=int(d["logging_steps"]),

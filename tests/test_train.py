@@ -144,3 +144,15 @@ def test_tokenizer_loaded_lazily(monkeypatch, tmp_path):
     trainer = make_trainer(tmp_path)
     trainer.tokenizer = None
     assert isinstance(trainer._tokenizer(), FakeChatTokenizer)
+
+
+def test_build_model_caps_cuda_memory_on_gpu(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(train, "limit_cuda_memory", lambda f: calls.append(f))
+    trainer = make_trainer(tmp_path)
+    trainer.build_model(config())
+    assert calls == []  # CPU trainer: no cap
+    trainer.device = "cuda"
+    trainer.model_factory = lambda ms, d: tiny_qwen2(vocab_size=128, seed=3)
+    trainer.build_model(config())
+    assert calls == [settings.load_train_settings().cuda_memory_fraction] == [0.75]

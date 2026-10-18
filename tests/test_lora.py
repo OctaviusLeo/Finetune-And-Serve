@@ -72,3 +72,13 @@ def test_load_helpers_call_transformers(monkeypatch):
     assert tok.pad_token == "<eos>" and calls["tok"] == ("Org/M", "rev")
     lora.load_base_model("Org/M", "rev", "bfloat16", "cpu")
     assert calls["model"] == ("Org/M", "rev", torch.bfloat16) and calls["device"] == "cpu"
+
+
+def test_limit_cuda_memory(monkeypatch):
+    calls = []
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+    assert lora.limit_cuda_memory(0.75) is False
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+    monkeypatch.setattr(torch.cuda, "set_per_process_memory_fraction", lambda f: calls.append(f))
+    assert lora.limit_cuda_memory(None) is False and calls == []
+    assert lora.limit_cuda_memory(0.75) is True and calls == [0.75]
