@@ -146,7 +146,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Write `config/hosted.yaml` with the provider settings, prices (with source URL and access date), and `spend_cap_usd` set to the Spend_Cap in design.md.
   - _Requirements: 0.9, 0.13, 3.3, 3.4_
 
-- [ ] 1.4 Write unit tests for `ModelClient`
+- [x] 1.4 Write unit tests for `ModelClient`
   - Test missing-secret fail-fast (raises, names the variable, non-zero intent), timeout surfacing as a typed error, retry on 429, and dropping a rejected parameter, with the HTTP layer faked.
   - _Requirements: 0.13_
 
