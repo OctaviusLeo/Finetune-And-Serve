@@ -4,7 +4,38 @@ Exact versions of every tool, library, API and model this project relies on, eac
 
 ## Machine and GPU
 
-Filled in by the Dry_Run (task 1.6).
+- GPU total VRAM reported by `nvidia-smi`: **10240 MiB**
+- Python: `3.12.3` (Linux-6.18.54.1-microsoft-standard-WSL2-x86_64-with-glibc2.39)
+- Command: `python scripts/dry_run.py`
+- Seed: `0`
+- Commit: `de2a2a64073249a5a254f4b5c5077935ee5a46ca`
+
+`nvidia-smi` output captured by the Dry_Run:
+
+```text
+Sat Oct 17 21:08:50 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 615.78.05              KMD Version: 617.42        CUDA UMD Version: 13.4     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 3080        On  |   00000000:2B:00.0  On |                  N/A |
+| 36%   62C    P0            192W /  368W |    2410MiB /  10240MiB |     30%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A              27      G   /Xwayland                             N/A      |
+|    0   N/A  N/A              58      G   /Xwayland                             N/A      |
+|    0   N/A  N/A           25164      C   /python3.12                           N/A      |
++-----------------------------------------------------------------------------------------+
+```
 
 ## Python environment
 
@@ -72,7 +103,21 @@ Required-by: finetune-and-serve, peft
 
 ## Base model and VRAM Dry_Run
 
-Filled in by the Dry_Run (task 1.6).
+- Result: **PASSED**
+- Base_Model: `Qwen/Qwen2.5-1.5B-Instruct` at revision `989aa7980e4cf806f80c7fef2b1adb7bc71aa306`; license Apache-2.0
+- PEFT method: LoRA on bf16 base weights (no quantization); quantization during the Dry_Run: none (bf16 weights)
+- LoRA: r=16, alpha=32, dropout=0.05, targets q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj; gradient checkpointing on
+- Sequence length: 256 tokens (every sequence padded to the full length)
+- Per-device batch size: 8; gradient accumulation 2
+- Optimizer steps: 20 (AdamW, learning rate 0.0002)
+- Trainable parameters: 18464768 of 1562179072
+- Peak GPU memory, `torch.cuda.max_memory_reserved()`: **9326 MiB**
+- Peak GPU memory, `nvidia-smi` sampled once per second (whole GPU): **10038 MiB**
+- `nvidia-smi` total: **10240 MiB**
+- Wall time: 649.0 s
+- Command: `python scripts/dry_run.py`
+- Seed: `0`
+- Commit: `de2a2a64073249a5a254f4b5c5077935ee5a46ca`
 
 ## Hosted model and Spend_Cap
 

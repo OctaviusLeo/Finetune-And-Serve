@@ -199,7 +199,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
     - records MASSIVE (CC BY 4.0) and SLURP (CC BY 4.0) with attribution in `THIRD_PARTY.md`.
   - _Requirements: 2.2, 2.3, 2.4, 2.7, 0.8_
 
-- [ ] 2.5 Implement the Task_Metric
+- [x] 2.5 Implement the Task_Metric
   - `fts/metric.py` defines `parse_prediction`, `score_example` (field-level F1 exactly as design.md defines it, range [0, 1], invalid output = 0), and `aggregate` (mean), with the range documented in the module.
   - _Requirements: 2.1_
 

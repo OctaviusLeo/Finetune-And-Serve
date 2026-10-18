@@ -1,73 +1,118 @@
-"""Task_Metric: deterministic field-level F1 for JSON extraction (Req 2.1, 0.13).
+"""Task_Metric: field-level F1 for intent-and-slot JSON, range [0, 1] (Req 2.1).
 
-The default Task_Metric is a field-level F1 over the key/value pairs of a JSON
-object extracted by the model, compared against the gold JSON object. It is a
-deterministic pure function in ``[0, 1]`` behind a clean, swappable boundary
-(``score_example``) so the owner can replace the metric without touching callers.
-``aggregate`` returns the arithmetic mean of per-example scores, also in
-``[0, 1]``.
+For one example, the gold and predicted fields are multisets of pairs:
+``("intent", intent)`` plus ``(slot_type, value)`` for every slot, with every
+string lowercased, trimmed, and internal whitespace collapsed. Matches are
+counted with multiplicity:
 
-Range contract
---------------
-``score_example(prediction, gold)`` returns a float in ``[0.0, 1.0]`` and is
-``1.0`` exactly when ``prediction`` and ``gold`` parse to the same set of
-field/value pairs. ``aggregate(scores)`` returns a float in ``[0.0, 1.0]`` (the
-mean), or ``0.0`` for an empty input.
+    precision = matches / predicted pairs
+    recall    = matches / gold pairs
+    F1        = 2PR / (P + R), and 0 when there are no matches.
+
+A prediction is invalid, and scores 0, when no JSON object with a string
+``intent`` and a list ``slots`` of ``{"type": str, "value": str}`` objects can be
+parsed from the first ``{...}`` block of the output. The aggregate is the mean
+per-example F1, also in [0, 1].
+
+Hand-computed example: gold {alarm_set; time: five am; date: this week},
+prediction {alarm_set; time: five am}: P = 2/2, R = 2/3, F1 = 0.8.
 """
 
 from __future__ import annotations
 
 import json
+import re
+from collections import Counter
 from collections.abc import Sequence
+from dataclasses import dataclass
+
+METRIC_RANGE = (0.0, 1.0)
+_WS = re.compile(r"\s+")
 
 
-def _parse_fields(text: str) -> dict[str, str] | None:
-    """Parse ``text`` into a flat ``{field: stringified value}`` mapping.
+@dataclass(frozen=True)
+class Parsed:
+    intent: str
+    slots: tuple[tuple[str, str], ...]  # (type, value) in output order
 
-    Returns ``None`` when the text is not a JSON object. Values are normalized
-    to their JSON string form so comparison is type- and whitespace-stable.
-    """
+
+def first_json_object(text: str) -> str | None:
+    """The first balanced ``{...}`` block in ``text`` (braces inside strings ignored), or None."""
+    start = text.find("{")
+    if start == -1:
+        return None
+    depth, in_str, escaped = 0, False, False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if in_str:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_str = False
+        elif ch == '"':
+            in_str = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : i + 1]
+    return None  # the first "{" never closes
+
+
+def parse_prediction(text: str) -> Parsed | None:
+    """Parse the first ``{...}`` block as {"intent": str, "slots": [{"type": str, "value": str}]}; None if invalid."""
+    block = first_json_object(text)
+    if block is None:
+        return None
     try:
-        obj = json.loads(text)
-    except (ValueError, TypeError):
+        obj = json.loads(block)
+    except json.JSONDecodeError:
         return None
-    if not isinstance(obj, dict):
+    if not isinstance(obj, dict) or not isinstance(obj.get("intent"), str) or not isinstance(obj.get("slots"), list):
         return None
-    return {str(k): json.dumps(v, sort_keys=True) for k, v in obj.items()}
+    slots = []
+    for slot in obj["slots"]:
+        if not isinstance(slot, dict) or not isinstance(slot.get("type"), str) or not isinstance(slot.get("value"), str):
+            return None
+        slots.append((slot["type"], slot["value"]))
+    return Parsed(intent=obj["intent"], slots=tuple(slots))
+
+
+def normalize(text: str) -> str:
+    return _WS.sub(" ", text).strip().lower()
+
+
+def field_pairs(parsed: Parsed) -> Counter:
+    pairs = Counter({("intent", normalize(parsed.intent)): 1})
+    pairs.update((normalize(t), normalize(v)) for t, v in parsed.slots)
+    return pairs
+
+
+def f1_from_pairs(predicted: Counter, gold: Counter) -> float:
+    matches = sum((predicted & gold).values())
+    if matches == 0:
+        return 0.0
+    precision = matches / sum(predicted.values())
+    recall = matches / sum(gold.values())
+    return 2 * precision * recall / (precision + recall)
 
 
 def score_example(prediction: str, gold: str) -> float:
-    """Field-level F1 between the predicted and gold JSON objects, in ``[0, 1]``.
-
-    A predicted field is a true positive when the gold object has the same key
-    with an equal (JSON-normalized) value. Precision is TP / predicted fields,
-    recall is TP / gold fields, and the score is their harmonic mean. When
-    either object fails to parse as a JSON object, the score is ``1.0`` only if
-    both are byte-equal after stripping, else ``0.0``. Two empty JSON objects
-    score ``1.0``.
-    """
-    pred_fields = _parse_fields(prediction)
-    gold_fields = _parse_fields(gold)
-
-    if pred_fields is None or gold_fields is None:
-        return 1.0 if prediction.strip() == gold.strip() else 0.0
-
-    if not pred_fields and not gold_fields:
-        return 1.0
-
-    true_positives = sum(
-        1 for k, v in pred_fields.items() if k in gold_fields and gold_fields[k] == v
-    )
-    if true_positives == 0:
+    """Field-level F1 of ``prediction`` against the canonical ``gold`` JSON; invalid prediction -> 0.0."""
+    gold_parsed = parse_prediction(gold)
+    if gold_parsed is None:
+        raise ValueError(f"gold target is not valid task JSON: {gold!r}")
+    pred_parsed = parse_prediction(prediction)
+    if pred_parsed is None:
         return 0.0
-
-    precision = true_positives / len(pred_fields)
-    recall = true_positives / len(gold_fields)
-    return 2.0 * precision * recall / (precision + recall)
+    return f1_from_pairs(field_pairs(pred_parsed), field_pairs(gold_parsed))
 
 
 def aggregate(scores: Sequence[float]) -> float:
-    """Return the mean of per-example ``scores`` in ``[0, 1]`` (``0.0`` if empty)."""
-    if not scores:
-        return 0.0
+    """Mean per-example F1 over the scored examples, in [0, 1]."""
+    if len(scores) == 0:
+        raise ValueError("aggregate needs at least one score")
     return sum(scores) / len(scores)
