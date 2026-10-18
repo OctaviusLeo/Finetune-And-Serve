@@ -399,7 +399,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Write `scripts/check_traceability.py` with `check_traceability(doc_path, generated_sources)`, which scans every numeric token in `README.md` and `MODEL_CARD.md` (URLs excluded) and reports each one not found in the generated sources listed in design.md, exiting with a failed status when any exist.
   - _Requirements: 10.4, 10.5_
 
-- [ ] 6.4 Write property test for number traceability
+- [x] 6.4 Write property test for number traceability
   - **Property 11: README/Model_Card number traceability** — the check flags exactly the untraceable numbers and fails when any exist.
   - **Validates: Requirements 10.4, 10.5**
 
