@@ -111,7 +111,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - From PowerShell: if the folder is not a Git repository, run `git init -b main`; otherwise keep its current branch. Set `origin` to `https://github.com/OctaviusLeo/Finetune-And-Serve.git` (the owner made it private and it is empty), commit, and `git push -u origin HEAD`.
   - _Requirements: 0.9, 0.10, 0.11, 0.12_
 
-- [ ] 0.2 Implement the shared reproducibility helper
+- [x] 0.2 Implement the shared reproducibility helper
   - `fts/repro.py` provides the 40-character commit hash via `git rev-parse HEAD`; a check, run when a script starts and before it writes anything, that refuses to stamp a reported result when `git --no-optional-locks status --porcelain` shows changes outside `results/`, `runs/`, `docs/`, `README.md`, `MODEL_CARD.md`, and `.kiro/`; a `Stamp` struct carrying `{command, seed, commit}`; and a serializer used by every result-emitting script. These two read-only commands are the only Git commands run against this repository from WSL; tests may create throwaway repositories in a temporary directory.
   - _Requirements: 0.1, 0.2_
 
