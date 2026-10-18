@@ -310,7 +310,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - **Property 6: Error-analysis group counts sum to the analyzed total** — each failure gets exactly one documented group, `sum(group.count) == analyzed`, `analyzed >= min(50, available_failures)`.
   - **Validates: Requirements 5.4, 5.5**
 
-- [ ] 4.5 Build the single-command evaluation entry point
+- [x] 4.5 Build the single-command evaluation entry point
   - `fts/eval.py` (invocable as `python -m fts.eval --config ... --seed ...`) runs non-interactively from one command. It writes `results/finetuned.json`: each seed's Test F1 with its CI, and the mean and spread across seeds. It writes `results/error_analysis.json`: the group counts and examples. Both are stamped with command, seed, and 40-character commit hash.
   - _Requirements: 5.6, 0.1, 0.3_
 
