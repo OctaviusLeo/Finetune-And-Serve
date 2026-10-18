@@ -306,7 +306,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - `fts/error_analysis.py` defines `FailureGroup`, `ErrorAnalysis`, and the rule-based classifier for design.md's five-group taxonomy (first matching group wins). It analyzes every failure (F1 < 1) of the serving seed and saves five examples per group.
   - _Requirements: 5.4, 5.5_
 
-- [ ] 4.4 Write property test for the error-analysis group counts
+- [x] 4.4 Write property test for the error-analysis group counts
   - **Property 6: Error-analysis group counts sum to the analyzed total** — each failure gets exactly one documented group, `sum(group.count) == analyzed`, `analyzed >= min(50, available_failures)`.
   - **Validates: Requirements 5.4, 5.5**
 
