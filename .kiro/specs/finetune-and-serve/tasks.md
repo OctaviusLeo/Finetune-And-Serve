@@ -136,7 +136,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Test that a peak-versus-total comparison flags over-budget, that an out-of-memory error is reported with the limit, and that the Python-version guard reports and fails on < 3.11, with `nvidia-smi` and torch faked.
   - _Requirements: 1.2, 1.4, 1.5_
 
-- [ ] 1.3 Implement the OpenAI-compatible `ModelClient` and the spend ledger
+- [x] 1.3 Implement the OpenAI-compatible `ModelClient` and the spend ledger
   - `fts/model_client.py` implements `ModelClient` as design.md describes:
     - The API key comes from `os.environ[api_key_env]` only when the config requires one. If it is required and unset or empty, the client raises before any request, names the variable, and exits non-zero.
     - It enforces a timeout and retries 429/5xx up to 5 times with exponential backoff.
