@@ -1,0 +1,25 @@
+# Serving_Endpoint (design.md "Quantization and serving runtime"): llama-server from the pinned llama.cpp CUDA image.
+# Start it with the single documented command: bash scripts/serve.sh [f16|q4]
+name: fts
+services:
+  serve:
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda12-b11580
+    command: ["-m", "/models/${FTS_SERVE_MODEL:-ft-q4_k_m.gguf}", "--host", "0.0.0.0", "--port", "8080",
+              "-ngl", "all", "-np", "32", "-c", "16384", "--jinja", "--metrics", "--alias", "fts-ft"]
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - "${HOME}/fts-artifacts/models:/models:ro"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 10s

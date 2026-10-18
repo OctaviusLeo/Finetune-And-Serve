@@ -342,7 +342,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Test that `QuantizedModel` records method and bit width and that the Docker commands are built as design.md describes, with Docker faked.
   - _Requirements: 6.1_
 
-- [ ] 5.3 Implement the serving start command
+- [x] 5.3 Implement the serving start command
   - Write `docker-compose.yml` (top-level `name: fts`) with the `serve` service exactly as design.md describes: pinned `server-cuda12-b<build>` image, GPU reservation, read-only models mount, port 8080, `/health` healthcheck, model file chosen by `FTS_SERVE_MODEL`.
   - Write `scripts/serve.sh [f16|q4]`, the single start command. It reads `config/serve.yaml`; when `require_api_key` is true and `FTS_SERVE_API_KEY` is unset or empty, it exits non-zero naming the variable before starting anything. Otherwise it starts or recreates only the `fts` project's `serve` container and waits for `/health` to return 200.
   - Write `fts/vram_monitor.py`, which samples `nvidia-smi` once per second to a file and asserts the peak is at most the total.
