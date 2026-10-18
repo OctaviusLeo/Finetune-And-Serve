@@ -258,7 +258,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Test that a `RunRecord` captures the loss curve, config, seed, Validation metric, and a 40-char commit hash, and that the trainer never reads the Test_Split (injected splits whose Test accessor fails if touched), using a tiny random model on the CPU.
   - _Requirements: 4.2, 4.7_
 
-- [ ] 3.3 Implement the sweep and the final multi-seed runner
+- [x] 3.3 Implement the sweep and the final multi-seed runner
   - `fts/sweep.py` defines `SweepResult`, `run_sweep`, and `run_final_seeds`:
     - `run_sweep` covers configs A, B, and C from design.md (in `config/sweep.yaml`), all with seed 1, and selects the Final_Configuration by Validation F1 with ties to the earlier config, recording the selection and its justifying metric.
     - `run_final_seeds` covers seeds 1, 2, and 3, reusing the selected config's seed-1 sweep Run, and records the serving seed as design.md defines it.

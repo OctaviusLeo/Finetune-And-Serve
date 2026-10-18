@@ -1,0 +1,8 @@
+# LoRA sweep (design.md "Sweep"); rationale in docs/SWEEP_RATIONALE.md. Do not edit after the sweep starts.
+seed: 1
+configs:
+  - {name: A, lora_r: 8, lora_alpha: 16, learning_rate: 2.0e-4}
+  - {name: B, lora_r: 16, lora_alpha: 32, learning_rate: 2.0e-4}
+  - {name: C, lora_r: 16, lora_alpha: 32, learning_rate: 1.0e-4}
+# Final_Configuration Runs: seed 1 is the sweep Run, so seeds 2 and 3 are trained.
+final_seeds: [1, 2, 3]
