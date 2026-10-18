@@ -33,12 +33,12 @@ def select_exemplars(train: Sequence[Example], k: int = DEFAULT_K, seed: int = D
     chosen: list[Example] = []
     seen: set[str] = set()
     for ex in order:
+        if len(chosen) >= k:
+            break
         scenario = scenario_of(ex)
         if scenario not in seen:
             seen.add(scenario)
             chosen.append(ex)
-            if len(chosen) == k:
-                break
     return chosen
 
 

@@ -222,7 +222,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Write `scripts/select_exemplars.py`, and run it to produce `config/few_shot_exemplars.json` (10 Train_Split exemplars, seed 0, distinct scenarios).
   - _Requirements: 3.5, 3.6, 5.8_
 
-- [ ] 2.10 Write property test for exemplar leakage
+- [x] 2.10 Write property test for exemplar leakage
   - **Property 8: Few-shot exemplars never leak Test/Validation** — exemplar ids ⊆ Train_Split ids and disjoint from Validation and Test.
   - **Validates: Requirements 3.5, 4.7**
 
