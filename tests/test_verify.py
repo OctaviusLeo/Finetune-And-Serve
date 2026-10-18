@@ -210,3 +210,48 @@ def test_m4_flags_missing_variant_and_stamp(tmp_path):
     (root / "results" / "loadtest.json").write_text(json.dumps(lt), encoding="utf-8")
     failures = "\n".join(verify.check_m4(root))
     assert "gguf-q4_k_m missing" in failures and "loadtest level 1: stamp missing" in failures and "level 4: tokens/s or failed count missing" in failures
+
+
+def write_m5_root(root):
+    from fts import report
+    from tests.results_fixture import write_results
+
+    write_results(root / "results")
+    report.write_results_table(root / "results", root / "results" / "summary.md", repro.to_dict(STAMP))
+    report.plot_loss_curves(root / "results", root / "results" / "plots" / "loss_curves.png")
+    report.plot_sweep_quality(root / "results", root / "results" / "plots" / "sweep_quality.png")
+    (root / "README.md").write_text("# readme\n", encoding="utf-8")
+    (root / "MODEL_CARD.md").write_text("# card\n", encoding="utf-8")
+    (root / "config").mkdir(exist_ok=True)
+    shutil.copy(verify.REPO_ROOT / "config" / "hosted.yaml", root / "config" / "hosted.yaml")
+    return root
+
+
+def test_m5_passes(tmp_path):
+    assert verify.check_m5(write_m5_root(tmp_path)) == []
+
+
+def test_m5_flags_missing_pieces_and_model_files(tmp_path):
+    root = write_m5_root(tmp_path)
+    (root / "results" / "plots" / "loss_curves.png").unlink()
+    (root / "MODEL_CARD.md").unlink()
+    (root / "fts").mkdir()
+    (root / "fts" / "weights.safetensors").write_bytes(b"x")
+    (root / "adapters" / "B").mkdir(parents=True)
+    (root / "runs").mkdir()
+    (root / "runs" / "ignored.gguf").write_bytes(b"x")
+    text = (root / "results" / "summary.md").read_text(encoding="utf-8").replace("commit `" + "d" * 40 + "`", "commit `none`", 2)
+    (root / "results" / "summary.md").write_text(text, encoding="utf-8")
+    failures = "\n".join(verify.check_m5(root))
+    assert "loss_curves.png is missing" in failures and "MODEL_CARD.md is missing" in failures
+    assert "fts/weights.safetensors" in failures and "adapters/B" in failures and "ignored.gguf" not in failures
+    assert "lacks its stamp" in failures
+
+
+def test_m5_flags_missing_summary_and_sources(tmp_path):
+    root = write_m5_root(tmp_path)
+    (root / "results" / "summary.md").write_text("# Results summary\n\n## Data\n\n_Missing: results/data_counts.json_\n", encoding="utf-8")
+    failures = "\n".join(verify.check_m5(root))
+    assert "missing sources" in failures and "section 'Sweep' missing" in failures and "Test F1 section has no CIs" in failures
+    (root / "results" / "summary.md").unlink()
+    assert "results/summary.md is missing" in "\n".join(verify.check_m5(root))

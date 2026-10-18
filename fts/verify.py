@@ -261,7 +261,56 @@ def check_m4(root: Path = REPO_ROOT) -> list[str]:
     return c.failures
 
 
-CHECKS: dict[str, Callable[[Path], list[str]]] = {"m0": check_m0, "m1": check_m1, "m2": check_m2, "m3": check_m3, "m4": check_m4}
+
+
+MODEL_PATTERNS = ("*.safetensors", "*.gguf", "*.bin", "*.pt")
+SKIP_DIRS = {".git", "runs", ".venv", "__pycache__", ".pytest_cache", ".hypothesis"}
+
+
+def model_files(root: Path) -> list[str]:
+    """Model-weight files anywhere in the working tree outside ignored run folders (none may be tracked)."""
+    import fnmatch
+    import os
+
+    found = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        rel = Path(dirpath).relative_to(root)
+        if rel.parts[:1] == ("adapters",):
+            found.append(rel.as_posix())
+            continue
+        found += [(rel / f).as_posix() for f in filenames if any(fnmatch.fnmatch(f, p) for p in MODEL_PATTERNS)]
+    return sorted(found)
+
+
+def check_m5(root: Path = REPO_ROOT) -> list[str]:
+    from fts.report import PLOTS, SECTIONS
+
+    c = Checker(root)
+    summary_path = root / "results" / "summary.md"
+    if c.require(summary_path.exists(), "results/summary.md is missing"):
+        text = summary_path.read_text(encoding="utf-8")
+        c.require("_Missing" not in text, "results/summary.md has missing sources")
+        for title in SECTIONS:
+            body = envdoc.read_section(title, summary_path)
+            if c.require(body is not None, f"summary.md: section '{title}' missing"):
+                c.require(bool(re.search(r"commit `[0-9a-f]{40}`", body)), f"summary.md: section '{title}' lacks its stamp")
+        test_section = envdoc.read_section(SECTIONS[1], summary_path) or ""
+        c.require(bool(re.search(r"\d\.\d{4} \[\d\.\d{4}, \d\.\d{4}\]", test_section)), "summary.md: Test F1 section has no CIs")
+        quant_section = envdoc.read_section(SECTIONS[3], summary_path) or ""
+        c.require(len(re.findall(r"\d\.\d{4} \[\d\.\d{4}, \d\.\d{4}\]", quant_section)) >= 3, "summary.md: quantization section lacks CIs")
+    for plot in PLOTS:
+        c.require((root / "results" / "plots" / plot).is_file(), f"results/plots/{plot} is missing")
+    for doc in ("README.md", "MODEL_CARD.md"):
+        c.require((root / doc).is_file(), f"{doc} is missing")
+    spent, cap = ledger_total(root)
+    c.require(spent <= cap, f"hosted ledger total ${spent:.6f} exceeds the Spend_Cap ${cap:.2f}")
+    files = model_files(root)
+    c.require(not files, f"model files in the repository tree: {files}")
+    return c.failures
+
+
+CHECKS: dict[str, Callable[[Path], list[str]]] = {"m0": check_m0, "m1": check_m1, "m2": check_m2, "m3": check_m3, "m4": check_m4, "m5": check_m5}
 
 
 def main(argv: list[str] | None = None, root: Path = REPO_ROOT) -> int:

@@ -22,6 +22,7 @@ def cfg(name: str, r: int, a: int, lr: float, seed: int = 1) -> dict:
 def write_results(results: Path) -> Path:
     w = lambda name, payload: repro.write_json(results / name, payload, STAMP)  # noqa: E731
     w("data_counts.json", {"counts": {"train": 11514, "validation": 2033, "test": 2974}, "excluded": 0, "overlap": {"pairs": {}, "total": 0},
+                           "dataset": {"name": "MASSIVE", "version": "1.1", "locale": "en-US"},
                            "shared_utterances": {"train-validation": 11, "train-test": 21, "validation-test": 5}})
     ledger = {"spend_usd": 0.4321, "spend_cap_usd": 2.0, "prompt_price_per_mtok": 0.125, "completion_price_per_mtok": 0.5, "requests": 2975}
     baselines = [
