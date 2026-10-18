@@ -103,7 +103,12 @@ The weights are downloaded to the Hugging Face cache at run time and never commi
 
 ## Dataset
 
-Filled in at task 2.4.
+| Name | Version | License | Source |
+| --- | --- | --- | --- |
+| MASSIVE (English, `en-US.jsonl`) | 1.1 | CC-BY-4.0 | https://amazon-massive-nlu-dataset.s3.amazonaws.com/amazon-massive-dataset-1.1.tar.gz (SHA-256 `4cba5faa11c71437928e17cb1b9b3d8b8e727e7ea363a3a9a8045e19c0491577`, accessed 2026-10-17) |
+| SLURP (the English text MASSIVE derives from) | as included in MASSIVE 1.1 | CC-BY-4.0 | https://github.com/pswietojanski/slurp |
+
+Attribution: MASSIVE, FitzGerald et al., "MASSIVE: A 1M-Example Multilingual Natural Language Understanding Dataset with 51 Typologically-Diverse Languages" (2022), Amazon, licensed CC BY 4.0 (https://github.com/alexa/massive, `NOTICE.md`). SLURP, Bastianelli et al., "SLURP: A Spoken Language Understanding Resource Package" (2020), licensed CC BY 4.0. This repository commits a transformed copy of the English records (`data/massive_en/`): the utterance, the official partition, and the intent and slots rewritten as one JSON object.
 
 ## Container images
 
