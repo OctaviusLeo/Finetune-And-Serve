@@ -224,7 +224,44 @@ def check_m3(root: Path = REPO_ROOT) -> list[str]:
     return c.failures
 
 
-CHECKS: dict[str, Callable[[Path], list[str]]] = {"m0": check_m0, "m1": check_m1, "m2": check_m2, "m3": check_m3}
+def check_m4(root: Path = REPO_ROOT) -> list[str]:
+    c = Checker(root)
+    q = c.json("results/quantization.json")
+    if q is not None:
+        c.stamp("results/quantization.json", q)
+        got = {(m.get("method"), m.get("bit_width")) for m in q.get("models", [])}
+        c.require(got == {("gguf-f16", 16), ("gguf-q4_k_m", 4)}, f"quantization.json: expected F16 (16) and Q4_K_M (4), got {sorted(got)}")
+    qq = c.json("results/quant_quality.json")
+    if qq is not None:
+        c.stamp("results/quant_quality.json", qq)
+        variants = {v.get("method"): v for v in qq.get("variants", [])}
+        for method in ("gguf-f16", "gguf-q4_k_m"):
+            v = variants.get(method)
+            if c.require(v is not None, f"quant_quality.json: {method} missing"):
+                check_ci(c, f"quant_quality {method}", v.get("metric"))
+                vram = v.get("vram", {})
+                c.require(vram.get("total_mib", 0) > 0 and vram.get("peak_mib", 10**9) <= vram.get("total_mib", 0),
+                          f"quant_quality {method}: peak serving VRAM {vram.get('peak_mib')} MiB exceeds total {vram.get('total_mib')} MiB")
+    lt = c.json("results/loadtest.json")
+    if lt is not None:
+        c.stamp("results/loadtest.json", lt)
+        levels = lt.get("levels", [])
+        c.require(len(levels) > 0, "loadtest.json: no levels")
+        for lv in levels:
+            n = lv.get("concurrency_level")
+            c.require(lv.get("p50_latency_ms", 1) <= lv.get("p95_latency_ms", 0), f"loadtest level {n}: P50 > P95")
+            c.require(isinstance(lv.get("tokens_per_second"), (int, float)) and isinstance(lv.get("failed_requests"), int), f"loadtest level {n}: tokens/s or failed count missing")
+            s = lv.get("stamp") or {}
+            c.require(s.get("concurrency") == n and bool(HASH.fullmatch(str(s.get("commit", "")))) and bool(s.get("command")) and isinstance(s.get("seed"), int),
+                      f"loadtest level {n}: stamp missing")
+        c.require(isinstance(lt.get("max_concurrent_requests"), int), "loadtest.json: maximum sustained concurrency missing")
+        vram = lt.get("vram", {})
+        c.require(vram.get("total_mib", 0) > 0 and vram.get("peak_mib", 10**9) <= vram.get("total_mib", 0),
+                  f"loadtest: peak serving VRAM {vram.get('peak_mib')} MiB exceeds total {vram.get('total_mib')} MiB")
+    return c.failures
+
+
+CHECKS: dict[str, Callable[[Path], list[str]]] = {"m0": check_m0, "m1": check_m1, "m2": check_m2, "m3": check_m3, "m4": check_m4}
 
 
 def main(argv: list[str] | None = None, root: Path = REPO_ROOT) -> int:

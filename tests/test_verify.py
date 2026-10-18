@@ -177,3 +177,36 @@ def test_m3_flags_mismatched_tests_and_sums(tmp_path):
 def test_default_artifacts_env(monkeypatch, tmp_path):
     monkeypatch.setenv("FTS_ARTIFACTS", str(tmp_path))
     assert verify.default_artifacts() == tmp_path
+
+
+def write_m4_root(root, *, peak=6000, p50=100.0, bits=(16, 4)):
+    vram = {"peak_mib": peak, "total_mib": 10240}
+    repro.write_json(root / "results" / "quantization.json", {"models": [{"method": "gguf-f16", "bit_width": bits[0]}, {"method": "gguf-q4_k_m", "bit_width": bits[1]}]}, STAMP)
+    variants = [{"method": m, "metric": {"point": 0.9, "lower": 0.89, "upper": 0.91}, "vram": vram} for m in ("gguf-f16", "gguf-q4_k_m")]
+    repro.write_json(root / "results" / "quant_quality.json", {"variants": variants}, STAMP)
+    levels = [{"concurrency_level": c, "p50_latency_ms": p50, "p95_latency_ms": 200.0, "tokens_per_second": 40.0, "failed_requests": 0,
+               "stamp": {"command": "python scripts/loadtest.py", "seed": 0, "concurrency": c, "commit": "c" * 40}} for c in (1, 2)]
+    repro.write_json(root / "results" / "loadtest.json", {"levels": levels, "max_concurrent_requests": 2, "vram": vram}, STAMP)
+    return root
+
+
+def test_m4_passes(tmp_path):
+    assert verify.check_m4(write_m4_root(tmp_path)) == []
+
+
+def test_m4_flags_problems(tmp_path):
+    failures = "\n".join(verify.check_m4(write_m4_root(tmp_path, peak=11000, p50=300.0, bits=(16, 8))))
+    assert "expected F16 (16) and Q4_K_M (4)" in failures and "P50 > P95" in failures and "exceeds total 10240" in failures
+
+
+def test_m4_flags_missing_variant_and_stamp(tmp_path):
+    root = write_m4_root(tmp_path)
+    q = json.loads((root / "results" / "quant_quality.json").read_text(encoding="utf-8"))
+    q["variants"] = q["variants"][:1]
+    (root / "results" / "quant_quality.json").write_text(json.dumps(q), encoding="utf-8")
+    lt = json.loads((root / "results" / "loadtest.json").read_text(encoding="utf-8"))
+    lt["levels"][0]["stamp"] = None
+    lt["levels"].append({"concurrency_level": 4, "p50_latency_ms": 1.0, "p95_latency_ms": 2.0})
+    (root / "results" / "loadtest.json").write_text(json.dumps(lt), encoding="utf-8")
+    failures = "\n".join(verify.check_m4(root))
+    assert "gguf-q4_k_m missing" in failures and "loadtest level 1: stamp missing" in failures and "level 4: tokens/s or failed count missing" in failures

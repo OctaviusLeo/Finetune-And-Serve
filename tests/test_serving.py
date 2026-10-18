@@ -122,9 +122,12 @@ def test_serving_endpoint_answers_a_chat_completion():
     """Starts the real Serving_Endpoint (Q4_K_M) and gets a completion through ModelClient."""
     if shutil.which("docker") is None:
         pytest.fail("docker is required for this test")
-    out = subprocess.run(["bash", str(SERVE_SH), "q4"], capture_output=True, text=True, cwd=REPO)
-    assert out.returncode == 0, out.stderr
-    cfg = settings.load_yaml(REPO / "config" / "serve.yaml")
-    with client_from_config({**cfg, "api_key_env": None}) as client:
-        completion = client.complete([{"role": "system", "content": "Answer with JSON."}, {"role": "user", "content": "Request: wake me up at seven am"}], 64)
-    assert completion.text and completion.completion_tokens > 0 and completion.model
+    try:
+        out = subprocess.run(["bash", str(SERVE_SH), "q4"], capture_output=True, text=True, cwd=REPO)
+        assert out.returncode == 0, out.stderr
+        cfg = settings.load_yaml(REPO / "config" / "serve.yaml")
+        with client_from_config({**cfg, "api_key_env": None}) as client:
+            completion = client.complete([{"role": "system", "content": "Answer with JSON."}, {"role": "user", "content": "Request: wake me up at seven am"}], 64)
+        assert completion.text and completion.completion_tokens > 0 and completion.model
+    finally:
+        subprocess.run(["docker", "compose", "-f", "docker-compose.yml", "stop", "serve"], cwd=REPO, capture_output=True)
