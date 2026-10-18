@@ -123,7 +123,7 @@ def test_max_steps_stops_early_and_partial_accumulation():
 
 def test_config_helpers_and_run_id():
     c = train.config_from(settings.load_train_settings(), "B", 16, 32, 2e-4, seed=1)
-    assert c.max_seq_len == 256 and c.per_device_batch_size == 8 and c.grad_accum == 2 and c.epochs == 2.0
+    assert c.max_seq_len == 256 and c.per_device_batch_size == 4 and c.grad_accum == 4 and c.epochs == 2.0
     assert train.run_id(c) == "B-seed1" and train.with_seed(c, 3).seed == 3
 
 

@@ -2,7 +2,7 @@
 
 Before any full training Run, prove that the Base_Model, PEFT method and
 sequence length fit in VRAM: run a few LoRA optimizer steps at the worst case
-among the sweep configs (``lora_r`` 16, per-device batch 8, every sequence a
+among the sweep configs (``lora_r`` 16, the configured per-device batch, every sequence a
 full ``max_seq_len`` tokens) and measure peak GPU memory two ways:
 
 * ``torch.cuda.max_memory_reserved()`` - what PyTorch's allocator reserved;

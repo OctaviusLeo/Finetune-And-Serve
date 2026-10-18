@@ -22,7 +22,7 @@ def test_repository_configs_load():
     model = settings.load_model_settings()
     train = settings.load_train_settings()
     assert model.name == "Qwen/Qwen2.5-1.5B-Instruct" and model.license == "Apache-2.0"
-    assert train.max_seq_len == 256 and train.per_device_batch_size == 8 and train.grad_accum == 2
+    assert train.max_seq_len == 256 and train.per_device_batch_size == 4 and train.grad_accum == 4
     assert train.dry_run.lora_r == 16 and train.dry_run.steps == 20
     assert "q_proj" in train.target_modules
 

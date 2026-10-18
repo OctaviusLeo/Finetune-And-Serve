@@ -2,8 +2,12 @@
 # The sweep varies only lora_r, lora_alpha and learning_rate (config/sweep.yaml).
 peft_method: LoRA on bf16 base weights (no quantization)
 max_seq_len: 256
-per_device_batch_size: 8
-grad_accum: 2
+# VRAM fallback (design.md), applied 2026-10-18: at per-device batch 8 x accumulation 2 the sweep's first Run
+# (A-seed1) failed with "CUDA error: out of memory" between optimizer steps 20 and 30 on 2026-10-17 23:24 and
+# 2026-10-18 01:28, both times starting from a free GPU. The batch-8 Dry_Run peak (9326 MiB reserved) plus the
+# 1.2-2.4 GB the desktop holds leaves no headroom. Halved batch, doubled accumulation: effective batch stays 16.
+per_device_batch_size: 4
+grad_accum: 4
 epochs: 2
 warmup_ratio: 0.03
 lr_scheduler: linear

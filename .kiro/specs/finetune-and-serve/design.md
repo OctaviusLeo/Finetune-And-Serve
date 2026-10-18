@@ -159,10 +159,10 @@ Rationale against the original 7–8B QLoRA recommendation: a 1.5B model trains 
 
 - **Hugging Face `transformers` + `peft` + `accelerate`** (with `trl` only if its trainer is used); no `bitsandbytes`, because neither training nor serving needs it.
 - **PEFT method: LoRA on bf16 base weights** (most Base_Model weights frozen, Req 4.1), target modules `q_proj`, `k_proj`, `v_proj`, `o_proj`, `gate_proj`, `up_proj`, `down_proj`, LoRA dropout 0.05, gradient checkpointing on.
-- **Fixed settings for every Run:** `max_seq_len` 256 tokens, per-device batch 8 with gradient accumulation 2 (effective batch 16), 2 epochs, linear learning-rate decay with 3% warmup, loss computed on the assistant (JSON) tokens only, seeded data order, logging every 10 optimizer steps, only the final Adapter saved (no intermediate checkpoints).
+- **Fixed settings for every Run:** `max_seq_len` 256 tokens, per-device batch 8 with gradient accumulation 2 (effective batch 16) — reduced to batch 4 with accumulation 4 by the VRAM fallback on 2026-10-18, after real training ran out of memory at batch 8 (reason in `config/train.yaml` and `docs/ENVIRONMENT.md`), 2 epochs, linear learning-rate decay with 3% warmup, loss computed on the assistant (JSON) tokens only, seeded data order, logging every 10 optimizer steps, only the final Adapter saved (no intermediate checkpoints).
 - **Determinism settings:** `torch.use_deterministic_algorithms(True, warn_only=True)`, `CUBLAS_WORKSPACE_CONFIG=:4096:8`, `torch.backends.cudnn.benchmark = False`, seeds set for Python, NumPy, and PyTorch.
 - If the data pipeline reports a tokenized example longer than 256 tokens, `max_seq_len` becomes the next power of two above the longest example, and the Dry_Run is repeated at that value.
-- **VRAM fallback:** if the Dry_Run's peak exceeds the `nvidia-smi` total or runs out of memory, halve the per-device batch and double gradient accumulation (the effective batch stays 16), down to a per-device batch of 2, and record the reason. If it still does not fit, that is a blocker.
+- **VRAM fallback:** if the Dry_Run's peak exceeds the `nvidia-smi` total or runs out of memory (or, as happened on 2026-10-18, a training Run runs out of memory although the Dry_Run fitted), halve the per-device batch and double gradient accumulation (the effective batch stays 16), down to a per-device batch of 2, and record the reason. If it still does not fit, that is a blocker.
 
 ### Task, Dataset, and Task_Metric
 
