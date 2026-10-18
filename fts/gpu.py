@@ -58,6 +58,53 @@ def within_budget(peak_mib: float, total_mib: float) -> bool:
     return total_mib > 0 and peak_mib <= total_mib
 
 
+#: Idle reading above this means another program holds GPU memory (task 1.6).
+IDLE_LIMIT_MIB = 3072
+#: A GPU job may start when usage is at most this much above the recorded idle reading.
+BUSY_MARGIN_MIB = 1024
+WAIT_STEP_S = 300
+MAX_WAIT_S = 1200
+
+
+@dataclass(frozen=True)
+class WaitResult:
+    ok: bool
+    used_mib: int
+    limit_mib: int
+    waited_s: float
+    readings: tuple[int, ...]
+
+
+def wait_until_at_most(
+    limit_mib: int,
+    query: Callable[[], GpuMemory] = query_memory,
+    sleep: Callable[[float], None] = time.sleep,
+    step_s: float = WAIT_STEP_S,
+    max_wait_s: float = MAX_WAIT_S,
+    log: Callable[[str], None] = lambda m: print(m, flush=True),
+) -> WaitResult:
+    """Poll until GPU memory used is at most ``limit_mib``, checking every ``step_s`` up to ``max_wait_s``.
+
+    Never stops anything to free the GPU; it only waits and reports.
+    """
+    waited = 0.0
+    readings = []
+    while True:
+        used = query().used_mib
+        readings.append(used)
+        if used <= limit_mib:
+            return WaitResult(True, used, limit_mib, waited, tuple(readings))
+        if waited >= max_wait_s:
+            return WaitResult(False, used, limit_mib, waited, tuple(readings))
+        log(f"GPU busy: {used} MiB used > limit {limit_mib} MiB; waiting {step_s:.0f} s ({waited:.0f} s waited so far)")
+        sleep(step_s)
+        waited += step_s
+
+
+def read_idle_mib(path) -> int:
+    return int(open(path, encoding="utf-8").read().split()[0])
+
+
 class MemorySampler:
     """Samples GPU memory every ``interval_s`` seconds on a daemon thread.
 
