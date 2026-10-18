@@ -391,7 +391,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Write `fts/report.py` and `scripts/build_summary.py`, which generate `results/summary.md` from `results/*.json` with every section design.md lists. They also generate the loss-curve plot (the three final seeds) and a sweep/quality plot (Validation F1 per config, and Test F1 with CIs per system) into `results/plots/`.
   - _Requirements: 10.1, 10.2_
 
-- [ ] 6.2 Write unit tests for Results_Table generation
+- [x] 6.2 Write unit tests for Results_Table generation
   - Test that regenerating produces the file, that a CI appears for every reported quality metric, and that every section carries a stamp.
   - _Requirements: 10.1, 10.2_
 

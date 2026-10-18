@@ -1,96 +1,79 @@
-"""Unit tests for the Results_Table writer + plots (task 6.2)."""
+"""Unit tests for Results_Table generation and the plots (task 6.2; Req 10.1, 10.2)."""
 
 from __future__ import annotations
 
 import re
 
-from fts.eval_core import BootstrapCI
-from fts.report import (
-    LoadTestRow,
-    MetricRow,
-    QuantQualityRow,
-    render_results_table,
-    write_loss_curve_plot,
-    write_results_table,
-    write_sweep_quality_plot,
-)
+from fts import report, repro
+from tests.results_fixture import STAMP, write_results
 
 
-def _quality_rows():
-    return [
-        MetricRow("base-zero-shot", BootstrapCI(point=0.40, lower=0.35, upper=0.45)),
-        MetricRow("base-few-shot", BootstrapCI(point=0.55, lower=0.50, upper=0.60)),
-        MetricRow("hosted-few-shot", BootstrapCI(point=0.62, lower=0.57, upper=0.67)),
-        MetricRow("Finetuned_Model", BootstrapCI(point=0.78, lower=0.74, upper=0.82)),
-    ]
+def sections(text: str) -> dict[str, str]:
+    parts = re.split(r"(?m)^## ", text)[1:]
+    return {p.splitlines()[0]: p for p in parts}
 
 
-def _quant_row():
-    return QuantQualityRow(
-        finetuned=BootstrapCI(point=0.78, lower=0.74, upper=0.82),
-        quantized=BootstrapCI(point=0.76, lower=0.72, upper=0.80),
-    )
+def test_regenerating_produces_the_file_with_every_section(tmp_path):
+    results = write_results(tmp_path / "results")
+    out = report.write_results_table(results, results / "summary.md", repro.to_dict(STAMP))
+    text = out.read_text(encoding="utf-8")
+    assert list(sections(text)) == list(report.SECTIONS)
+    assert "_Missing" not in text and f"commit `{STAMP.commit}`" in text.splitlines()[3]
+    again = report.render_results_table(results, repro.to_dict(STAMP))
+    assert again == text  # regeneration is deterministic
 
 
-def _load_rows():
-    return [
-        LoadTestRow(1, 100.0, 150.0, 42.0, 1, 0),
-        LoadTestRow(4, 180.0, 260.0, 90.0, 4, 1),
-    ]
+def test_every_quality_metric_has_a_ci(tmp_path):
+    text = report.render_results_table(write_results(tmp_path / "results"))
+    s = sections(text)
+    rows = [line for line in s["Test F1: baselines and fine-tuned seeds"].splitlines() if line.startswith("| ") and "System" not in line and "---" not in line]
+    ci = re.compile(r"\d\.\d{4} \[\d\.\d{4}, \d\.\d{4}\]")
+    assert len(rows) == 3 + 3 + 1
+    assert all(ci.search(r) for r in rows if "mean" not in r) and "0.8812 ± 0.0022" in rows[-1]
+    quant_rows = [line for line in s["Quantization quality"].splitlines() if line.startswith("| GGUF")]
+    assert len(quant_rows) == 2 and all(ci.search(r) for r in quant_rows)
+    assert ci.search(s["Quantization quality"].split("Reference:")[1])
 
 
-def test_regenerating_writes_summary_file(tmp_path):
-    """Regenerating produces results/summary.md (idempotent overwrite)."""
-    path = write_results_table(
-        _quality_rows(), _quant_row(), _load_rows(), seed=0, results_dir=tmp_path
-    )
-    assert path.exists()
-    assert path.name == "summary.md"
-    first = path.read_text(encoding="utf-8")
-
-    # Regeneration overwrites and is stable (same seed/commit/inputs).
-    path2 = write_results_table(
-        _quality_rows(), _quant_row(), _load_rows(), seed=0, results_dir=tmp_path
-    )
-    assert path2 == path
-    assert path2.read_text(encoding="utf-8") == first
+def test_every_section_carries_a_stamp(tmp_path):
+    text = report.render_results_table(write_results(tmp_path / "results"))
+    for title, body in sections(text).items():
+        assert re.search(r"command `[^`]+`, seed `\d+`, commit `[0-9a-f]{40}`", body), title
 
 
-def test_ci_appears_for_every_reported_quality_metric():
-    """A 95% CI column value appears for every reported quality metric."""
-    md = render_results_table(_quality_rows(), _quant_row(), _load_rows(), seed=0)
-
-    # Each quality row renders a "[lower, upper]" CI cell.
-    ci_cells = re.findall(r"\[\d+\.\d{4}, \d+\.\d{4}\]", md)
-    # 4 baseline/finetuned rows + 2 pre/post-quant rows = 6 CI cells.
-    assert len(ci_cells) == 6
-
-    for row in _quality_rows():
-        assert f"{row.metric.point:.4f}" in md
-        assert f"[{row.metric.lower:.4f}, {row.metric.upper:.4f}]" in md
+def test_section_contents(tmp_path):
+    s = sections(report.render_results_table(write_results(tmp_path / "results")))
+    assert "| B (selected) | 16 | 32 | 0.0002 | 0.8902 |" in s["Sweep"] and "serving seed 2" in s["Sweep"]
+    assert "| wrong_intent | 151 |" in s["Error analysis"] and "| **Total analyzed** | 355 |" in s["Error analysis"]
+    assert "| 32 | 520 | 1540 | 1280.0 | 0 | no |" in s["Load test"] and "Maximum sustained concurrency: **16**" in s["Load test"]
+    assert "$0.4318" in s["Hosted spend"] and "Spend_Cap of $2.00" in s["Hosted spend"]
+    assert "5.11 bits per weight" in s["Quantization quality"] and "| Test | 2974 |" in s["Data"]
 
 
-def test_provenance_block_records_command_and_seed():
-    """The summary records its generating command and seed (traceability)."""
-    md = render_results_table(_quality_rows(), None, [], seed=7, command="python -m fts.report")
-    assert "python -m fts.report" in md
-    assert "seed: `7`" in md
-    assert "No quantization quality recorded" in md
-    assert "No Load_Test recorded" in md
+def test_missing_sources_are_flagged(tmp_path):
+    text = report.render_results_table(tmp_path)
+    for name in ("data_counts.json", "baselines.json", "finetuned.json", "sweep.json", "quant_quality.json", "error_analysis.json", "loadtest.json"):
+        assert f"_Missing: results/{name}_" in text
 
 
-def test_quant_delta_rendered():
-    """The pre/post-quant row renders the point-estimate delta."""
-    md = render_results_table(_quality_rows(), _quant_row(), _load_rows(), seed=0)
-    # 0.76 - 0.78 = -0.02 -> rendered as -0.0200.
-    assert "-0.0200" in md
+def test_plots_are_written(tmp_path):
+    results = write_results(tmp_path / "results")
+    loss = report.plot_loss_curves(results, results / "plots" / "loss_curves.png")
+    qual = report.plot_sweep_quality(results, results / "plots" / "sweep_quality.png")
+    assert loss.stat().st_size > 1000 and qual.stat().st_size > 1000
+    assert loss.read_bytes()[:4] == b"\x89PNG"
+    assert report.plot_loss_curves(tmp_path / "none", tmp_path / "x.png") is None
+    assert report.plot_sweep_quality(tmp_path / "none", tmp_path / "y.png") is None
 
 
-def test_plots_written_to_results_dir(tmp_path):
-    """The loss-curve and sweep/quality plots render into results/."""
-    loss_path = write_loss_curve_plot({0: 2.0, 10: 1.2, 20: 0.8}, results_dir=tmp_path)
-    sweep_path = write_sweep_quality_plot(
-        {"cfg-a": 0.70, "cfg-b": 0.78, "cfg-c": 0.74}, results_dir=tmp_path
-    )
-    assert loss_path.exists() and loss_path.stat().st_size > 0
-    assert sweep_path.exists() and sweep_path.stat().st_size > 0
+def test_main_writes_summary_and_plots(tmp_path, monkeypatch):
+    write_results(tmp_path / "results")
+    monkeypatch.setattr(repro, "start_run", lambda seed: STAMP)
+    assert report.main(root=tmp_path) == 0
+    assert (tmp_path / "results" / "summary.md").exists()
+    assert sorted(p.name for p in (tmp_path / "results" / "plots").iterdir()) == sorted(report.PLOTS)
+
+
+def test_formatters():
+    assert report.f1(0.88123) == "0.8812" and report.ms(1539.6) == "1540" and report.tps(12.34) == "12.3" and report.usd(0.43184) == "0.4318"
+    assert report.ci({"point": 0.5, "lower": 0.4, "upper": 0.6}) == "0.5000 [0.4000, 0.6000]"
