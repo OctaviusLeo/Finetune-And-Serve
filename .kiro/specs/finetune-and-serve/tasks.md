@@ -226,7 +226,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - **Property 8: Few-shot exemplars never leak Test/Validation** — exemplar ids ⊆ Train_Split ids and disjoint from Validation and Test.
   - **Validates: Requirements 3.5, 4.7**
 
-- [ ] 2.11 Implement the baselines runner
+- [x] 2.11 Implement the baselines runner
   - `fts/baselines.py` defines `BaselineResult` and `run_baselines`, evaluating three baselines on the Test_Split with the Task_Metric and a 95% bootstrap CI each:
     - Base_Model zero-shot (local);
     - Base_Model few-shot (local);
