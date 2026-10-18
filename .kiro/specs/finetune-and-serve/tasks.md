@@ -285,7 +285,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Run `scripts/check_train_determinism.py` detached and write `results/train_determinism.json` (stamped).
   - _Requirements: 4.6_
 
-- [ ] 3.9 **Automated gate (M2):** run `bash scripts/verify_m2.sh`, which runs `bash scripts/test_unit.sh` and the full `pytest`, and checks:
+- [x] 3.9 **Automated gate (M2):** run `bash scripts/verify_m2.sh`, which runs `bash scripts/test_unit.sh` and the full `pytest`, and checks:
   - `results/sweep.json` has three configs with Validation F1, a selection, and a rationale file;
   - `results/final_runs.json` has three distinct seeds whose Adapters exist under `~/fts-artifacts/adapters/`, with loss curves, configs, and 40-character commit hashes;
   - `results/train_determinism.json` passed or documents a named nondeterministic kernel;
