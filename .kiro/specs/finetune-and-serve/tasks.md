@@ -348,7 +348,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Write `fts/vram_monitor.py`, which samples `nvidia-smi` once per second to a file and asserts the peak is at most the total.
   - _Requirements: 6.2, 6.4, 6.5, 6.6_
 
-- [ ] 5.4 Write tests for serving
+- [x] 5.4 Write tests for serving
   - Unit tests: the missing-secret start failure names the variable; the VRAM monitor's peak-versus-total decision works.
   - A `docker`-marked test starts `scripts/serve.sh q4` and gets a chat completion back through `ModelClient`. It first runs at the M4 gate, after task 5.5 has created the model files.
   - _Requirements: 6.4, 6.5, 6.6_
