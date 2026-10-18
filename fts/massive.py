@@ -182,3 +182,30 @@ def main(argv: list[str] | None = None) -> int:
     train = settings.load_train_settings()
     status, _ = build(tar_path, URL, accessed, stamp, hf_token_counter(model), train.max_seq_len)
     return status
+
+
+def rebuild_and_compare(root: Path = REPO_ROOT, tar_path: Path | None = None) -> list[str]:
+    """Rebuild the splits from the cached tarball under runs/ and compare with data/massive_en (M1 gate).
+
+    Returns failure messages: a tarball whose SHA-256 differs from results/data_counts.json,
+    any membership or target difference, or any id overlap in the committed splits.
+    """
+    failures: list[str] = []
+    recorded = json.loads((root / "results" / "data_counts.json").read_text(encoding="utf-8"))["dataset"]
+    tar = download(recorded["url"], tar_path or root / "runs" / "cache" / Path(recorded["url"]).name)
+    if sha256_of(tar) != recorded["sha256"]:
+        return [f"tarball SHA-256 {sha256_of(tar)} differs from the recorded {recorded['sha256']}"]
+    report = data.transform_all(iter_member_records(tar), SEED)
+    rebuilt = data.build_splits(report.examples, SEED)
+    data.write_splits(rebuilt, root / "runs" / "rebuild" / "massive_en")
+    committed = data.load_splits(root / "data" / "massive_en")
+    for name in data.SPLIT_NAMES:
+        a, b = rebuilt.by_name(name), committed.by_name(name)
+        if [e.example_id for e in a] != [e.example_id for e in b]:
+            failures.append(f"{name}: rebuilt membership differs from data/massive_en")
+        elif [e.target for e in a] != [e.target for e in b] or [e.inputs for e in a] != [e.inputs for e in b]:
+            failures.append(f"{name}: rebuilt targets or utterances differ from data/massive_en")
+    overlaps = data.check_overlap(committed)
+    if overlaps:
+        failures.append(f"committed splits overlap: {data.overlap_total(overlaps)} ids {overlaps}")
+    return failures

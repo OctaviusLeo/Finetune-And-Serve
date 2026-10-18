@@ -145,3 +145,22 @@ def test_hf_token_counter_counts_input_ids(monkeypatch):
     monkeypatch.setattr(fts.lora, "load_tokenizer", lambda name, revision: DictTok())
     count = massive.hf_token_counter(massive.settings.load_model_settings())
     assert count([{"role": "user", "content": "x"}]) == 7
+
+
+def test_rebuild_and_compare(tmp_path, root):
+    tar = make_tar(tmp_path, RECORDS)
+    status, _ = massive.build(tar, "https://example.invalid/massive.tar.gz", "d", STAMP, count_chars, 256, root=root)
+    assert status == 0
+    assert massive.rebuild_and_compare(root, tar_path=tar) == []
+    test_file = root / "data" / "massive_en" / "test.jsonl"
+    row = json.loads(test_file.read_text(encoding="utf-8"))
+    row["target"] = '{"intent": "changed", "slots": []}'
+    test_file.write_text(json.dumps(row) + "\n", encoding="utf-8")
+    assert massive.rebuild_and_compare(root, tar_path=tar) == ["test: rebuilt targets or utterances differ from data/massive_en"]
+    (root / "data" / "massive_en" / "validation.jsonl").write_text(test_file.read_text(encoding="utf-8"), encoding="utf-8")
+    failures = massive.rebuild_and_compare(root, tar_path=tar)
+    assert "validation: rebuilt membership differs from data/massive_en" in failures
+    assert any(f.startswith("committed splits overlap: 1 ids") for f in failures)
+    (tmp_path / "x").mkdir()
+    other = make_tar(tmp_path / "x", RECORDS[:2])
+    assert massive.rebuild_and_compare(root, tar_path=other)[0].startswith("tarball SHA-256")
