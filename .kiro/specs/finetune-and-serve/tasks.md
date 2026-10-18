@@ -189,7 +189,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - **Property 2: Deterministic split membership under a fixed seed** and **Property 3: Deterministic transform and malformed exclusion** — one Hypothesis test each.
   - **Validates: Requirements 2.3, 2.5, 2.6**
 
-- [ ] 2.4 Build the dataset and record provenance
+- [x] 2.4 Build the dataset and record provenance
   - Write and run `scripts/build_data.py`, which does the following:
     - downloads the MASSIVE 1.1 tarball from the URL in design.md into `runs/cache/` and records its SHA-256, URL, and access date;
     - extracts the `en-US.jsonl` member, transforms every record, builds and overlap-checks the Splits, and reports shared utterance texts;
