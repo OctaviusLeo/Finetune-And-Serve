@@ -154,7 +154,77 @@ def check_m1(root: Path = REPO_ROOT) -> list[str]:
     return c.failures
 
 
-CHECKS: dict[str, Callable[[Path], list[str]]] = {"m0": check_m0, "m1": check_m1}
+def default_artifacts() -> Path:
+    import os
+
+    return Path(os.environ.get("FTS_ARTIFACTS", Path.home() / "fts-artifacts"))
+
+
+def check_m2(root: Path = REPO_ROOT, artifacts: Path | None = None) -> list[str]:
+    artifacts = artifacts or default_artifacts()
+    c = Checker(root)
+    sweep = c.json("results/sweep.json")
+    if sweep is not None:
+        c.stamp("results/sweep.json", sweep)
+        metrics = sweep.get("val_metrics", {})
+        c.require(len(sweep.get("configs", [])) >= 3 and len(metrics) >= 3 and all(isinstance(v, float) for v in metrics.values()),
+                  "sweep.json: needs three configs with Validation F1")
+        c.require(sweep.get("selected", {}).get("name") in metrics, "sweep.json: no selected Final_Configuration")
+        if metrics and sweep.get("selected", {}).get("name") in metrics:
+            c.require(metrics[sweep["selected"]["name"]] == max(metrics.values()), "sweep.json: selection is not the best Validation F1")
+        c.require((root / str(sweep.get("rationale_path", ""))).is_file(), "sweep rationale file is missing")
+    final = c.json("results/final_runs.json")
+    if final is not None:
+        c.stamp("results/final_runs.json", final)
+        runs = final.get("runs", [])
+        c.require(len({r.get("seed") for r in runs}) >= 3, "final_runs.json: needs three distinct seeds")
+        for r in runs:
+            rid = r.get("run_id")
+            c.require((artifacts / str(r.get("adapter_path")) / "adapter_config.json").is_file(), f"{rid}: Adapter missing under {artifacts}")
+            c.require(len(r.get("loss_curve", [])) > 0, f"{rid}: loss curve missing")
+            c.require(isinstance(r.get("config"), dict) and r["config"].get("seed") == r.get("seed"), f"{rid}: config or seed missing")
+            c.require(bool(HASH.fullmatch(str(r.get("commit", "")))), f"{rid}: 40-character commit missing")
+        c.require(final.get("serving_seed") in {r.get("seed") for r in runs}, "final_runs.json: serving seed missing")
+    det = c.json("results/train_determinism.json")
+    if det is not None:
+        c.stamp("results/train_determinism.json", det)
+        c.require(det.get("status") == "identical" or (det.get("status") == "documented" and det.get("nondeterministic_kernels")),
+                  f"train_determinism: status {det.get('status')} is neither identical nor documented with a named kernel")
+    runs_dir = root / "results" / "runs"
+    records = sorted(runs_dir.glob("*.json")) if runs_dir.exists() else []
+    c.require(bool(records), "results/runs/ has no Run records")
+    for p in records:
+        text = p.read_text(encoding="utf-8")
+        rec = json.loads(text)
+        c.require(rec.get("splits_used") == ["train", "validation"] and "test.jsonl" not in text and '"test"' not in text,
+                  f"{p.name} references the Test_Split")
+    return c.failures
+
+
+def check_m3(root: Path = REPO_ROOT) -> list[str]:
+    c = Checker(root)
+    ft = c.json("results/finetuned.json")
+    base = c.json("results/baselines.json")
+    if ft is not None:
+        c.stamp("results/finetuned.json", ft)
+        seeds = ft.get("seeds", [])
+        c.require(len({s.get("seed") for s in seeds}) >= 3, "finetuned.json: needs three seeds")
+        for s in seeds:
+            check_ci(c, f"finetuned seed {s.get('seed')}", s.get("metric"))
+        c.require(isinstance(ft.get("mean"), float) and isinstance(ft.get("spread"), float), "finetuned.json: mean or spread missing")
+        if base is not None:
+            c.require(ft.get("test_ids_sha256") == base.get("test_ids_sha256") and all(s.get("test_ids_sha256") == base.get("test_ids_sha256") for s in seeds),
+                      "finetuned.json Test ids differ from baselines.json")
+    ea = c.json("results/error_analysis.json")
+    if ea is not None:
+        c.stamp("results/error_analysis.json", ea)
+        total = sum(g.get("count", 0) for g in ea.get("groups", []))
+        c.require(total == ea.get("analyzed"), f"error analysis: group counts sum to {total}, not {ea.get('analyzed')}")
+        c.require(ea.get("analyzed", 0) >= min(50, ea.get("available_failures", 0)), "error analysis: fewer than 50 failures analyzed")
+    return c.failures
+
+
+CHECKS: dict[str, Callable[[Path], list[str]]] = {"m0": check_m0, "m1": check_m1, "m2": check_m2, "m3": check_m3}
 
 
 def main(argv: list[str] | None = None, root: Path = REPO_ROOT) -> int:

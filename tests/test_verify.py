@@ -107,3 +107,73 @@ def test_main_exit_codes(tmp_path, capsys):
 
 def test_script_entry_point_imports():
     assert verify_script.main is verify.main
+
+
+# --- M2 and M3 ----------------------------------------------------------------------------
+
+def write_m2_root(root, artifacts, *, det_status="identical", kernels=(), test_in_record=False, best="B"):
+    (root / "docs").mkdir(parents=True, exist_ok=True)
+    (root / "docs" / "SWEEP_RATIONALE.md").write_text("# rationale\n", encoding="utf-8")
+    metrics = {"A": 0.80, "B": 0.86, "C": 0.84}
+    cfg = lambda name, seed=1: {"name": name, "lora_r": 16, "lora_alpha": 32, "learning_rate": 2e-4, "epochs": 2.0, "max_seq_len": 256,  # noqa: E731
+                                "per_device_batch_size": 8, "grad_accum": 2, "seed": seed}
+    repro.write_json(root / "results" / "sweep.json", {"configs": [cfg(n) for n in "ABC"], "val_metrics": metrics, "selected": cfg(best),
+                                                        "rationale_path": "docs/SWEEP_RATIONALE.md"}, STAMP)
+    runs = []
+    for s in (1, 2, 3):
+        rid = f"B-seed{s}"
+        (artifacts / "adapters" / rid).mkdir(parents=True, exist_ok=True)
+        (artifacts / "adapters" / rid / "adapter_config.json").write_text("{}", encoding="utf-8")
+        runs.append({"run_id": rid, "seed": s, "adapter_path": f"adapters/{rid}", "loss_curve": [[10, 1.0]], "config": cfg("B", s), "commit": "9" * 40})
+        record = {"run_id": rid, "splits_used": ["train", "validation"]}
+        if test_in_record:
+            record["data"] = "data/massive_en/test.jsonl"
+        repro.write_json(root / "results" / "runs" / f"{rid}.json", record, STAMP)
+    repro.write_json(root / "results" / "final_runs.json", {"runs": runs, "serving_seed": 2}, STAMP)
+    repro.write_json(root / "results" / "train_determinism.json", {"status": det_status, "nondeterministic_kernels": list(kernels)}, STAMP)
+    return root
+
+
+def test_m2_passes_with_identical_or_documented_determinism(tmp_path):
+    assert verify.check_m2(write_m2_root(tmp_path / "a", tmp_path / "art"), artifacts=tmp_path / "art") == []
+    root = write_m2_root(tmp_path / "b", tmp_path / "art", det_status="documented", kernels=["Flash Attention ... non-deterministic"])
+    assert verify.check_m2(root, artifacts=tmp_path / "art") == []
+
+
+def test_m2_flags_problems(tmp_path):
+    root = write_m2_root(tmp_path / "r", tmp_path / "art", det_status="unexplained", test_in_record=True, best="A")
+    shutil.rmtree(tmp_path / "art" / "adapters" / "B-seed3")
+    failures = "\n".join(verify.check_m2(root, artifacts=tmp_path / "art"))
+    assert "neither identical nor documented" in failures and "references the Test_Split" in failures
+    assert "B-seed3: Adapter missing" in failures and "selection is not the best" in failures
+
+
+def test_m2_flags_missing_records(tmp_path):
+    root = write_m2_root(tmp_path / "r", tmp_path / "art")
+    shutil.rmtree(root / "results" / "runs")
+    (root / "docs" / "SWEEP_RATIONALE.md").unlink()
+    failures = "\n".join(verify.check_m2(root, artifacts=tmp_path / "art"))
+    assert "no Run records" in failures and "rationale file is missing" in failures
+
+
+def write_m3_root(root, *, digest="d", analyzed=60, available=60, counts=(30, 10, 10, 5, 5)):
+    repro.write_json(root / "results" / "baselines.json", {"test_ids_sha256": "d"}, STAMP)
+    seeds = [{"seed": s, "metric": {"point": 0.9, "lower": 0.89, "upper": 0.91}, "test_ids_sha256": digest} for s in (1, 2, 3)]
+    repro.write_json(root / "results" / "finetuned.json", {"seeds": seeds, "mean": 0.9, "spread": 0.01, "test_ids_sha256": digest}, STAMP)
+    groups = [{"group": g, "count": n} for g, n in zip(("invalid_output", "wrong_intent", "missing_slot", "extra_slot", "wrong_slot_value"), counts)]
+    repro.write_json(root / "results" / "error_analysis.json", {"analyzed": analyzed, "available_failures": available, "groups": groups}, STAMP)
+    return root
+
+
+def test_m3_passes(tmp_path):
+    assert verify.check_m3(write_m3_root(tmp_path)) == []
+
+
+def test_m3_flags_mismatched_tests_and_sums(tmp_path):
+    failures = "\n".join(verify.check_m3(write_m3_root(tmp_path, digest="other", analyzed=40, available=70, counts=(1, 1, 1, 1, 1))))
+    assert "Test ids differ" in failures and "group counts sum to 5, not 40" in failures and "fewer than 50" in failures
+
+
+def test_default_artifacts_env(monkeypatch, tmp_path):
+    monkeypatch.setenv("FTS_ARTIFACTS", str(tmp_path))
+    assert verify.default_artifacts() == tmp_path
