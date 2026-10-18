@@ -374,7 +374,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Unit tests: the sustaining criterion and the maximum-concurrency rule on fixed fixtures, and that the runner is non-interactive and stamps command, seed, concurrency, and commit.
   - **Validates: Requirements 7.1, 7.5** _Requirements: 7.3, 7.4, 7.6_
 
-- [ ] 5.8 Run the load test
+- [x] 5.8 Run the load test
   - Commit and check the GPU is free. Serve `q4`, run `scripts/loadtest.py` detached while sampling VRAM, and write `results/loadtest.json` (stamped) with every level, the maximum sustained concurrency, and the peak VRAM versus the total.
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 6.4_
 

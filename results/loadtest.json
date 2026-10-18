@@ -1,0 +1,137 @@
+{
+  "command": "python scripts/loadtest.py",
+  "commit": "45a605d82be8518b86c5eba168578d099236d601",
+  "levels": [
+    {
+      "concurrency_level": 1,
+      "failed_requests": 0,
+      "p50_latency_ms": 110.70720999850892,
+      "p95_latency_ms": 207.48124475248915,
+      "stamp": {
+        "command": "python scripts/loadtest.py",
+        "commit": "45a605d82be8518b86c5eba168578d099236d601",
+        "concurrency": 1,
+        "seed": 0
+      },
+      "successful_requests": 128,
+      "sustained": true,
+      "tokens_per_second": 239.73334387805107,
+      "wall_seconds": 15.092
+    },
+    {
+      "concurrency_level": 2,
+      "failed_requests": 0,
+      "p50_latency_ms": 166.54279450085596,
+      "p95_latency_ms": 265.8918946468474,
+      "stamp": {
+        "command": "python scripts/loadtest.py",
+        "commit": "45a605d82be8518b86c5eba168578d099236d601",
+        "concurrency": 2,
+        "seed": 0
+      },
+      "successful_requests": 128,
+      "sustained": true,
+      "tokens_per_second": 312.7010729873554,
+      "wall_seconds": 10.841
+    },
+    {
+      "concurrency_level": 4,
+      "failed_requests": 0,
+      "p50_latency_ms": 280.9917790000327,
+      "p95_latency_ms": 484.2300257045279,
+      "stamp": {
+        "command": "python scripts/loadtest.py",
+        "commit": "45a605d82be8518b86c5eba168578d099236d601",
+        "concurrency": 4,
+        "seed": 0
+      },
+      "successful_requests": 128,
+      "sustained": true,
+      "tokens_per_second": 358.73429613521165,
+      "wall_seconds": 9.219
+    },
+    {
+      "concurrency_level": 8,
+      "failed_requests": 0,
+      "p50_latency_ms": 465.86649699747795,
+      "p95_latency_ms": 858.4545585501473,
+      "stamp": {
+        "command": "python scripts/loadtest.py",
+        "commit": "45a605d82be8518b86c5eba168578d099236d601",
+        "concurrency": 8,
+        "seed": 0
+      },
+      "successful_requests": 128,
+      "sustained": true,
+      "tokens_per_second": 434.96191661620355,
+      "wall_seconds": 7.851
+    },
+    {
+      "concurrency_level": 16,
+      "failed_requests": 0,
+      "p50_latency_ms": 738.2290144996659,
+      "p95_latency_ms": 1352.9536812962758,
+      "stamp": {
+        "command": "python scripts/loadtest.py",
+        "commit": "45a605d82be8518b86c5eba168578d099236d601",
+        "concurrency": 16,
+        "seed": 0
+      },
+      "successful_requests": 128,
+      "sustained": true,
+      "tokens_per_second": 497.2930215020626,
+      "wall_seconds": 6.696
+    },
+    {
+      "concurrency_level": 32,
+      "failed_requests": 0,
+      "p50_latency_ms": 1356.1390249960823,
+      "p95_latency_ms": 2842.8722373540945,
+      "stamp": {
+        "command": "python scripts/loadtest.py",
+        "commit": "45a605d82be8518b86c5eba168578d099236d601",
+        "concurrency": 32,
+        "seed": 0
+      },
+      "successful_requests": 128,
+      "sustained": false,
+      "tokens_per_second": 515.0982841316957,
+      "wall_seconds": 6.737
+    }
+  ],
+  "max_concurrent_requests": 16,
+  "model_file": "ft-q4_k_m.gguf",
+  "schedule": {
+    "concurrency_levels": [
+      1,
+      2,
+      4,
+      8,
+      16,
+      32
+    ],
+    "max_tokens": 128,
+    "p95_limit_ms": 2000,
+    "seed": 0,
+    "timed_requests": 128,
+    "timeout_s": 60,
+    "variant": "q4",
+    "warmup_requests": 5
+  },
+  "seed": 0,
+  "server": "llama-server b11580 (-np 32 -c 16384)",
+  "stamp": {
+    "command": "python scripts/loadtest.py",
+    "commit": "45a605d82be8518b86c5eba168578d099236d601",
+    "seed": 0
+  },
+  "sustaining_criterion": "no failed request and P95 <= 2000 ms",
+  "vram": {
+    "csv": "/mnt/c/dev/Finetune-And-Serve/runs/vram/loadtest.csv",
+    "failed_samples": 0,
+    "peak_mib": 2642,
+    "samples": 59,
+    "total_mib": 10240,
+    "within_budget": true
+  }
+}
