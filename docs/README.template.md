@@ -108,3 +108,7 @@ CI (GitHub Actions on `ubuntu-latest`) runs the unit tests and the Smoke_Evaluat
 - **"4-bit" is nominal.** Q4_K_M mixes 4-bit and higher-precision k-quant blocks. The measured bits per weight are in the Quantization section.
 - **One GPU under WSL2.** Latency and throughput are specific to an RTX 3080 under WSL2 with the compact prompt and short outputs, and other programs shared the GPU.
 - **Weights are not published.**
+
+## How this was built
+
+This project was built with Claude Code (Anthropic's agentic coding tool) as a pair programmer, under a spec-driven workflow: written requirements, then a design, then a task list with milestone gates, each gate reviewed before the next milestone started. The commit history shows this openly; commits carry a `Co-Authored-By` trailer naming the model that helped write them. Every reported number comes from a script in this repository and records the command, seed and commit that produced it, so nothing was typed, estimated or borrowed. I own the design decisions, the verification and the results, and I can explain and change any part of this code.
