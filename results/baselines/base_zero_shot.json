@@ -1,0 +1,28 @@
+{
+  "details": {
+    "batch_size": 8,
+    "completion_tokens": 98989,
+    "engine": "transformers bf16 greedy, max_new_tokens 128, left padding",
+    "prompt_tokens": 1541576,
+    "seconds": 1095.5
+  },
+  "metric": {
+    "lower": 0.31184187622696363,
+    "point": 0.3231898434823787,
+    "upper": 0.334670226377523
+  },
+  "n_test": 2974,
+  "name": "base_zero_shot",
+  "not_scored": 0,
+  "not_scored_examples": [],
+  "predictions_path": "runs/predictions/base_zero_shot.jsonl",
+  "prompt_template": "config/prompts/system.txt, config/prompts/zero_shot.txt",
+  "scored": 2974,
+  "spend_usd": 0.0,
+  "stamp": {
+    "command": "python -m fts.baselines --baseline local",
+    "commit": "421e6be6630e52ad7802ef33e2b443a961529049",
+    "seed": 0
+  },
+  "test_ids_sha256": "9b9dde5ca8f356893a4c513fe1cccb1c23d7a8b373d44497bef7c46dec54c835"
+}
