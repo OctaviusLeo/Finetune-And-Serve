@@ -150,7 +150,7 @@ Every wave holds one task, so tasks run strictly in this order: no two tasks edi
   - Test missing-secret fail-fast (raises, names the variable, non-zero intent), timeout surfacing as a typed error, retry on 429, and dropping a rejected parameter, with the HTTP layer faked.
   - _Requirements: 0.13_
 
-- [ ] 1.5 Write property test for hosted spend-cap enforcement
+- [x] 1.5 Write property test for hosted spend-cap enforcement
   - **Property 7: Hosted-baseline spend-cap enforcement** — reported spend equals the formula over completed requests and never exceeds the cap; the request that would cross it is not sent.
   - **Validates: Requirements 3.3, 3.4**
 
