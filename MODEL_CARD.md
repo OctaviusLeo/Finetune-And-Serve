@@ -25,11 +25,11 @@ MASSIVE 1.1 English (`en-US.jsonl`), license CC BY 4.0. Its English text comes f
 
 ## Metrics
 
-Field-level F1 over the multiset of (intent) and (slot type, value) pairs, in the range 0 to 1. Each figure is the point estimate with a 95% bootstrap CI from 1000 resamples:
+Field-level F1 over the multiset of (intent) and (slot type, value) pairs, in the range 0 to 1. The intent counts as one pair alongside the slot pairs, and each figure is the mean of the per-example F1 values, so it is not comparable to the intent accuracy or slot micro-F1 in the MASSIVE paper. Each figure is the point estimate with a 95% bootstrap CI from 1000 resamples:
 
 - Fine-tuned, mean ± standard deviation over 3 seeds: 0.8503 ± 0.0016; the serving seed scores 0.8508 [0.8402, 0.8604].
 - Served through llama-server: GGUF F16 0.8501 [0.8394, 0.8600], GGUF Q4_K_M 0.8462 [0.8360, 0.8561].
-- Baselines on the same Test_Split: base model zero-shot 0.3232 [0.3118, 0.3347], few-shot 0.3578 [0.3448, 0.3699], TypeSafe Jev (`jev-1.13.0`) few-shot 0.6872 [0.6745, 0.6996].
+- Baselines on the same Test_Split: base model zero-shot 0.3232 [0.3118, 0.3347], few-shot 0.3578 [0.3448, 0.3699], TypeSafe Jev (`jev-1.13.0`) few-shot 0.6872 [0.6745, 0.6996]. Jev is a hosted classification API: it selects the intent and slot spans, and code assembles the JSON.
 
 | Config | lora_r | lora_alpha | Learning rate | Validation F1 |
 | --- | --- | --- | --- | --- |
