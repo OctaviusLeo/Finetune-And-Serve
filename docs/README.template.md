@@ -1,15 +1,15 @@
 # Fine-Tune and Serve
 
-**A small open model, fine-tuned with LoRA, beats prompting the same model and a hosted model at turning voice-assistant requests into structured JSON, and still holds its accuracy after 4-bit quantization and under concurrent load on one consumer GPU.**
+**A small open model, fine-tuned with LoRA, beats prompting the same model and a hosted classification API at turning voice-assistant requests into structured JSON. It holds its accuracy after 4-bit quantization and serves {{max_concurrency}} concurrent clients at P95 {{p95_max_concurrency}} ms on one consumer GPU.**
 
 The model is `{{base_model}}`. Given one English request such as "wake me up at seven tomorrow", it returns `{"intent": ..., "slots": [{"type": ..., "value": ...}]}`. The data is Amazon's MASSIVE dataset in its official splits. The project covers the whole path a model takes to production: baselines, a LoRA sweep with fixed seeds, test evaluation with confidence intervals and error analysis, quantization with llama.cpp, an OpenAI-compatible server, and a load test.
 
 ## Headline results
 
 - **Fine-tuned** (mean ± standard deviation over {{n_final_seeds}} seeds): field-level F1 **{{f1_ft_mean}} ± {{f1_ft_spread}}** on the {{n_test}} test examples.
-- **Baselines** on the same test split and metric: base model zero-shot {{f1_zero_shot}}, base model few-shot {{f1_few_shot}}, TypeSafe Jev (`{{hosted_model}}`) few-shot {{f1_hosted}}. Each figure is the point estimate with its {{ci_percent}}% bootstrap CI.
-- **Quantized and served** with llama-server: GGUF F16 {{f1_f16}}, GGUF Q4_K_M {{f1_q4}}. Peak GPU memory while serving: {{vram_f16}} MiB for F16, {{vram_q4}} MiB for Q4_K_M.
-- **Load test** (Q4_K_M on one RTX 3080): **{{max_concurrency}}** concurrent clients sustained with no failed request, at P95 {{p95_max_concurrency}} ms.
+- **Baselines** on the same test split and metric: base model zero-shot {{f1_zero_shot}}, base model few-shot {{f1_few_shot}}, TypeSafe Jev (`{{hosted_model}}`) few-shot {{f1_hosted}}. Jev is a hosted classification API: it selects the intent and slot spans, and code assembles the JSON. Each figure is the point estimate with its {{ci_percent}}% bootstrap CI.
+- **Quantized and served** with llama-server: GGUF F16 {{f1_f16}}, GGUF Q4_K_M {{f1_q4}}. Peak GPU memory while serving (whole-GPU `nvidia-smi` reading, including the desktop): {{vram_f16}} MiB for F16, {{vram_q4}} MiB for Q4_K_M.
+- **Load test** (Q4_K_M on one RTX 3080, a single run of {{loadtest_timed}} timed requests per level): **{{max_concurrency}}** concurrent clients sustained with no failed request, at P95 {{p95_max_concurrency}} ms. The load test measures latency and failures only; quality was measured one request at a time.
 
 ![Sweep Validation F1 and Test F1 with CIs](results/plots/sweep_quality.png)
 
@@ -19,7 +19,7 @@ Every number in this file is generated. It comes from `results/summary.md` or `r
 
 - **Data pipeline:** MASSIVE records transformed into the JSON target, official splits checked for overlapping ids and shared utterance texts.
 - **Metric:** field-level F1 over intent and (slot type, value) pairs, with a percentile bootstrap CI.
-- **Baselines:** the base model zero-shot and few-shot, and a hosted model behind a spend cap with a cost ledger.
+- **Baselines:** the base model zero-shot and few-shot, and a hosted classification API (TypeSafe Jev, span selection) behind a spend cap with a cost ledger.
 - **Training:** LoRA with loss on the JSON tokens only, a hyperparameter sweep on Validation, then fixed-seed final runs and a determinism check.
 - **Serving:** Adapter merge, GGUF conversion and Q4_K_M quantization with llama.cpp in Docker, `llama-server` behind an OpenAI-compatible API, quality re-measured through the server, and an async load test with a GPU-memory monitor.
 - **Reproducibility:** every result file is stamped with its command, seed and commit, and the README and Model card are generated from those files.
@@ -57,7 +57,7 @@ flowchart LR
     B & E & V & L --> R[results/summary.md] --> M[README + Model card]
 ```
 
-- **Task and metric.** Input: one utterance. Output: `{"intent": ..., "slots": [{"type": ..., "value": ...}]}`. The score is field-level F1 over the multiset of (intent) and (slot type, value) pairs, with strings lowercased and whitespace collapsed. An invalid output scores 0. Range: 0 to 1.
+- **Task and metric.** Input: one utterance. Output: `{"intent": ..., "slots": [{"type": ..., "value": ...}]}`. The score is field-level F1 over the multiset of (intent) and (slot type, value) pairs, with strings lowercased and whitespace collapsed. An invalid output scores 0. Range: 0 to 1. The intent counts as one pair alongside the slot pairs, and the reported score is the mean of the per-example F1 values, so it is not comparable to the intent accuracy or slot micro-F1 in the MASSIVE paper.
 - **Data.** MASSIVE 1.1, English, in its official partitions: {{n_train}} Train, {{n_validation}} Validation and {{n_test}} Test examples, checked to be disjoint. The prompts list {{n_intents}} intents and {{n_slot_types}} slot types, built from the Train_Split only.
 - **Training.** LoRA on all attention and MLP projections of the bf16 base model, with `max_seq_len` {{max_seq_len}}, per-device batch {{per_device_batch_size}} and gradient accumulation {{grad_accum}} (effective batch {{effective_batch}}). {{epochs}} epochs, linear decay with {{warmup_percent}}% warmup, LoRA dropout {{lora_dropout}}, gradient clipping {{max_grad_norm}}. The loss covers the JSON tokens only, and the seeds are fixed. A {{n_sweep_configs}}-config sweep selects the configuration on Validation F1, and that configuration is trained with seeds {{final_seeds}}.
 - **Evaluation.** Hugging Face `transformers` in bf16 with greedy decoding (`max_new_tokens` {{max_new_tokens}}). Each metric gets a {{ci_percent}}% percentile bootstrap CI from {{bootstrap_resamples}} resamples. Every Test failure of the serving seed is grouped by type.
@@ -83,7 +83,7 @@ The tables below are the sections of `results/summary.md`.
 
 ### Load test
 
-Schedule: concurrency levels {{loadtest_levels}}. At each level, {{loadtest_warmup}} warm-up requests and {{loadtest_timed}} timed requests are sent, with a {{loadtest_timeout_s}} s timeout and `max_tokens` {{loadtest_max_tokens}}. Latency percentiles and tokens/s count successful requests only. A level is sustained when no request fails and P95 is at or below {{loadtest_p95_limit_ms}} ms.
+Schedule: concurrency levels {{loadtest_levels}}. At each level, {{loadtest_warmup}} warm-up requests and {{loadtest_timed}} timed requests are sent, with a {{loadtest_timeout_s}} s timeout and `max_tokens` {{loadtest_max_tokens}}. Latency percentiles and tokens/s count successful requests only. A level is sustained when no request fails and P95 is at or below {{loadtest_p95_limit_ms}} ms. The schedule was run once, and it records latency, throughput and failures, not output quality.
 
 {{summary_load}}
 
