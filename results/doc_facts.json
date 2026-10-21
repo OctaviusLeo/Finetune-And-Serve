@@ -41,7 +41,7 @@
   "spend_cap_usd": "2.00",
   "stamp": {
     "command": "python scripts/build_docs.py",
-    "commit": "de635062dc509e63b69c8cefe4e4f55c7e458f93",
+    "commit": "b4dd9888656289d6c528dd633ee616013e587ffa",
     "seed": 0
   },
   "sweep_seed": 1,
