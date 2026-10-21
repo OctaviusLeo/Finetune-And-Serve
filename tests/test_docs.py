@@ -44,7 +44,7 @@ def test_main_generates_both_documents_and_every_number_is_traceable(root):
     readme = (root / "README.md").read_text(encoding="utf-8")
     card = (root / "MODEL_CARD.md").read_text(encoding="utf-8")
     assert "{{" not in readme and "{{" not in card
-    assert "**This repository is private.**" in readme and "not published" in card
+    assert "[MIT License](LICENSE)" in readme and "not published" in readme and "not published" in card
     assert "0.8812 ± 0.0022" in readme and "0.7012 [0.6912, 0.7112]" in readme and "results/plots/loss_curves.png" in readme
     assert "`bash scripts/test_unit.sh`" in readme and "`python -m fts.smoke_eval`" in readme and "`bash scripts/serve.sh`" in readme
     assert "wrong_intent" in card and "151" in card and "CC BY 4.0" in card and "Apache-2.0" in card
