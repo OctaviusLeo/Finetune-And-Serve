@@ -109,7 +109,9 @@ def facts(root: Path = REPO_ROOT) -> dict:
         "serving_seed": str(ft["serving_seed"]),
         "f1_ft_serving": report.ci(next(s for s in ft["seeds"] if s["seed"] == ft["serving_seed"])["metric"]),
         "f1_f16": report.ci(variants["gguf-f16"]["metric"]), "f1_q4": report.ci(variants["gguf-q4_k_m"]["metric"]),
+        "vram_f16": str(variants["gguf-f16"]["vram"]["peak_mib"]), "vram_q4": str(variants["gguf-q4_k_m"]["vram"]["peak_mib"]),
         "max_concurrency": str(lt["max_concurrent_requests"]),
+        "p95_max_concurrency": report.ms(next(lv for lv in lt["levels"] if lv["concurrency_level"] == lt["max_concurrent_requests"])["p95_latency_ms"]),
         "ea_analyzed": str(ea["analyzed"]), "ea_top_group": top["group"], "ea_top_count": str(top["count"]),
         "ea_example": (f"for example, \"{example['utterance']}\" was predicted as `{example['prediction']}` against the gold `{example['gold']}`"
                        if example else "no example was saved"),
