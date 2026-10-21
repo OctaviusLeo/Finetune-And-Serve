@@ -65,6 +65,7 @@ This document defines the requirements only. Model selection, dataset selection,
 10. THE System SHALL pin the exact version of every dependency it declares.
 11. WHERE a module contains more than one public function or exceeds 50 source lines, THE System SHALL provide unit tests achieving at least 80 percent statement coverage for that module, and THE README SHALL state the exact single command that runs those tests.
 12. THE System SHALL remain a private repository without a public license, published package, or public release, and SHALL NOT publish the Finetuned_Model weights or Adapter, until the repository owner directs otherwise.
+    - **Owner decision, 2026-10-21:** the repository was released publicly under the MIT License. The repository and license parts of this requirement are superseded; the Finetuned_Model weights and Adapter remain unpublished.
 13. IF a required secret environment variable is unset or empty when a System component that depends on it starts, THEN THE System SHALL terminate before issuing any request that requires that secret, SHALL emit an error indicating which environment variable is missing, and SHALL exit with a non-zero exit status.
 
 ### Requirement 1: GPU environment and VRAM dry run (M0)
