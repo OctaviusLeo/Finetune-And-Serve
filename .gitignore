@@ -35,5 +35,9 @@ outputs/
 
 # IDE steering files and agent working files are local, not part of the project
 .kiro/steering/
+CLAUDE.md
 .kiro/specs/*/.config.kiro
 .agents/
+
+# Local Claude Code instructions (import the gitignored .kiro/steering files)
+CLAUDE.local.md
