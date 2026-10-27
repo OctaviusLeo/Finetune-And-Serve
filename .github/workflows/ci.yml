@@ -23,7 +23,7 @@ jobs:
         with:
           persist-credentials: false  # nothing here pushes, so later steps get no token
       # setup-uv publishes no floating major tag; Dependabot proposes version bumps.
-      - uses: astral-sh/setup-uv@v10.3.0
+      - uses: astral-sh/setup-uv@v10.3.2
         with:
           version: "0.13.1"
           python-version: "3.12"
