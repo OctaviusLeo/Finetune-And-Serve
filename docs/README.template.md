@@ -1,5 +1,8 @@
 # Fine-Tune and Serve
 
+[![CI](https://github.com/OctaviusLeo/Finetune-And-Serve/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/OctaviusLeo/Finetune-And-Serve/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **A small open model, fine-tuned with LoRA, beats prompting the same model and a hosted classification API at turning voice-assistant requests into structured JSON. It holds its accuracy after 4-bit quantization and serves {{max_concurrency}} concurrent clients at P95 {{p95_max_concurrency}} ms on one consumer GPU.**
 
 The model is `{{base_model}}`. Given one English request such as "wake me up at seven tomorrow", it returns `{"intent": ..., "slots": [{"type": ..., "value": ...}]}`. The data is Amazon's MASSIVE dataset in its official splits. The project covers the whole path a model takes to production: baselines, a LoRA sweep with fixed seeds, test evaluation with confidence intervals and error analysis, quantization with llama.cpp, an OpenAI-compatible server, and a load test.
