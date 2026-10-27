@@ -19,6 +19,8 @@ jobs:
         with:
           version: "0.13.1"
           python-version: "3.12"
+      - name: Lint (ruff, rules in pyproject.toml)
+        run: uvx ruff@0.17.0 check .
       - name: Install the locked environment
         run: uv sync --frozen
       - name: Unit and property tests with coverage

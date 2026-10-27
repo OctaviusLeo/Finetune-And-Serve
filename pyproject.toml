@@ -40,3 +40,8 @@ markers = [
     "gpu: needs the NVIDIA GPU (not run in hosted CI)",
     "docker: needs Docker and the llama.cpp images (not run in hosted CI)",
 ]
+
+[tool.ruff.lint]
+# Pyflakes and pycodestyle's error rules: unused imports, undefined names, syntax
+# errors. Listed explicitly so a newer ruff cannot change what CI enforces.
+select = ["E4", "E7", "E9", "F"]

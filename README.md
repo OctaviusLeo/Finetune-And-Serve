@@ -179,6 +179,7 @@ bash scripts/wsl_run.sh <command>
 | What | Single command |
 | --- | --- |
 | Unit and property tests (CPU, with the per-module coverage rule) | `bash scripts/test_unit.sh` |
+| Lint (ruff, with the rules set in `pyproject.toml`) | `uvx ruff check .` |
 | CPU smoke evaluation | `python -m fts.smoke_eval` |
 | Start the serving endpoint (Q4_K_M by default, or `f16`; needs the GGUF files) | `bash scripts/serve.sh` |
 | Data counts and splits (`results/data_counts.json`) | `python scripts/build_data.py` |
@@ -196,7 +197,7 @@ bash scripts/wsl_run.sh <command>
 | Check that this README and the Model card are up to date (writes nothing) | `python scripts/build_docs.py --check` |
 | Number traceability check | `python scripts/check_traceability.py` |
 
-**CI.** GitHub Actions runs the unit tests and the smoke evaluation on every push and pull request, on a GitHub-hosted `ubuntu-latest` runner with no GPU and no secrets. Modules with more than one public function or long bodies must reach 80% statement coverage. CI also fails if this README or the Model card differs from what `python scripts/build_docs.py` generates, or if any number in them cannot be traced to a generated file. Environment versions and evidence are in `docs/ENVIRONMENT.md`.
+**CI.** GitHub Actions lints the code with ruff and runs the unit tests and the smoke evaluation on every push and pull request, on a GitHub-hosted `ubuntu-latest` runner with no GPU and no secrets. Modules with more than one public function or long bodies must reach 80% statement coverage. CI also fails if this README or the Model card differs from what `python scripts/build_docs.py` generates, or if any number in them cannot be traced to a generated file. Environment versions and evidence are in `docs/ENVIRONMENT.md`.
 
 ## Repository layout
 
