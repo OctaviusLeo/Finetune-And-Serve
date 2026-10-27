@@ -8,11 +8,13 @@ results/doc_facts.json, which this module writes from the configs (split sizes,
 seeds, schedule, prices, cap, fixed training settings). An unknown placeholder
 is an error, so no number can be typed into a template by accident.
 
-    python scripts/build_docs.py
+    python scripts/build_docs.py           (regenerate)
+    python scripts/build_docs.py --check   (write nothing; exit 1 if a generated file is out of date)
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 from pathlib import Path
@@ -21,6 +23,7 @@ from fts import report, repro, settings
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PLACEHOLDER = re.compile(r"\{\{(\w+)\}\}")
+DOCUMENTS = (("docs/README.template.md", "README.md"), ("docs/MODEL_CARD.template.md", "MODEL_CARD.md"))
 DATASET_LICENSE = "CC BY 4.0"  # MASSIVE NOTICE.md (and SLURP); recorded in THIRD_PARTY.md by scripts/build_data.py
 
 
@@ -126,12 +129,43 @@ def render(template: str, values: dict) -> str:
     return PLACEHOLDER.sub(lambda m: values[m.group(1)], template)
 
 
+def render_documents(root: Path = REPO_ROOT) -> dict[str, str]:
+    """Each generated document's path and the text its template renders to from the current results."""
+    values = facts(root)
+    return {out: render((root / template).read_text(encoding="utf-8"), values) for template, out in DOCUMENTS}
+
+
+def stale_outputs(root: Path = REPO_ROOT) -> list[str]:
+    """Generated files that differ from what the templates, configs and results now produce (stamps ignored)."""
+    stale = []
+    facts_path = root / "results" / "doc_facts.json"
+    recorded = json.loads(facts_path.read_text(encoding="utf-8")) if facts_path.exists() else {}
+    recorded.pop("stamp", None)
+    if recorded != json.loads(json.dumps(doc_facts(root))):
+        stale.append("results/doc_facts.json")
+    for out, text in render_documents(root).items():
+        path = root / out
+        if not path.exists() or path.read_text(encoding="utf-8") != text:
+            stale.append(out)
+    return stale
+
+
 def main(argv: list[str] | None = None, root: Path = REPO_ROOT) -> int:
+    parser = argparse.ArgumentParser(
+        prog="python scripts/build_docs.py",
+        description="Generate README.md, MODEL_CARD.md and results/doc_facts.json from the templates in docs/, the configs and the results.",
+    )
+    parser.add_argument("--check", action="store_true", help="write nothing; exit 1 if any generated file is out of date (run in CI)")
+    args = parser.parse_args(argv or [])
+    if args.check:
+        stale = stale_outputs(root)
+        for out in stale:
+            print(f"STALE {out}: run python scripts/build_docs.py and commit the result")
+        print(f"{len(stale)} generated file(s) out of date" if stale else "generated docs are up to date")
+        return 1 if stale else 0
     stamp = repro.start_run(seed=0)
     repro.write_json(root / "results" / "doc_facts.json", doc_facts(root), stamp)
-    values = facts(root)
-    for template, out in (("docs/README.template.md", "README.md"), ("docs/MODEL_CARD.template.md", "MODEL_CARD.md")):
-        text = render((root / template).read_text(encoding="utf-8"), values)
+    for out, text in render_documents(root).items():
         (root / out).write_text(text, encoding="utf-8")
         print(f"wrote {out}")
     return 0

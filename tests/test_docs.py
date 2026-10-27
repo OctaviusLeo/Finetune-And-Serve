@@ -62,3 +62,22 @@ def test_example_fallback_when_no_example_saved(root):
     ea["examples"] = {}
     (root / "results" / "error_analysis.json").write_text(json.dumps(ea), encoding="utf-8")
     assert docs.facts(root)["ea_example"] == "no example was saved"
+
+
+def test_check_passes_after_generation_then_flags_each_stale_file_without_writing(root, capsys):
+    assert docs.main(root=root) == 0
+    assert docs.main(["--check"], root=root) == 0
+    readme = root / "README.md"
+    readme.write_text(readme.read_text(encoding="utf-8").replace("0.8812", "0.9999"), encoding="utf-8")
+    (root / "MODEL_CARD.md").unlink()
+    facts_path = root / "results" / "doc_facts.json"
+    recorded = json.loads(facts_path.read_text(encoding="utf-8"))
+    recorded["max_seq_len"] = 512
+    facts_path.write_text(json.dumps(recorded), encoding="utf-8")
+    edited = readme.read_text(encoding="utf-8")
+    capsys.readouterr()
+    assert docs.main(["--check"], root=root) == 1
+    out = capsys.readouterr().out
+    assert "STALE results/doc_facts.json" in out and "STALE README.md" in out and "STALE MODEL_CARD.md" in out
+    assert "3 generated file(s) out of date" in out
+    assert readme.read_text(encoding="utf-8") == edited and not (root / "MODEL_CARD.md").exists()

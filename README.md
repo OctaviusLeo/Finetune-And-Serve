@@ -193,9 +193,10 @@ bash scripts/wsl_run.sh <command>
 | Load test (`results/loadtest.json`) | `python scripts/loadtest.py` |
 | Results table and plots (`results/summary.md`) | `python scripts/build_summary.py` |
 | This README and the Model card | `python scripts/build_docs.py` |
+| Check that this README and the Model card are up to date (writes nothing) | `python scripts/build_docs.py --check` |
 | Number traceability check | `python scripts/check_traceability.py` |
 
-**CI.** GitHub Actions runs the unit tests and the smoke evaluation on every push and pull request, on a GitHub-hosted `ubuntu-latest` runner with no GPU and no secrets. Modules with more than one public function or long bodies must reach 80% statement coverage. Environment versions and evidence are in `docs/ENVIRONMENT.md`.
+**CI.** GitHub Actions runs the unit tests and the smoke evaluation on every push and pull request, on a GitHub-hosted `ubuntu-latest` runner with no GPU and no secrets. Modules with more than one public function or long bodies must reach 80% statement coverage. CI also fails if this README or the Model card differs from what `python scripts/build_docs.py` generates, or if any number in them cannot be traced to a generated file. Environment versions and evidence are in `docs/ENVIRONMENT.md`.
 
 ## Repository layout
 

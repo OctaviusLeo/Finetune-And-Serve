@@ -1,5 +1,5 @@
-# CI_Pipeline: CPU-only unit tests (with the per-module coverage rule) and the Smoke_Evaluation
-# on every push and pull request, on a GitHub-hosted runner. No GPU work and no secrets.
+# CI_Pipeline: CPU-only unit tests (with the per-module coverage rule), the Smoke_Evaluation and
+# the generated-docs checks on every push and pull request, on a GitHub-hosted runner. No GPU work and no secrets.
 name: CI
 
 on:
@@ -25,3 +25,7 @@ jobs:
         run: bash scripts/test_unit.sh
       - name: CPU Smoke_Evaluation
         run: uv run --frozen python -m fts.smoke_eval
+      - name: README and Model card match their templates and the results
+        run: uv run --frozen python scripts/build_docs.py --check
+      - name: Every number in the README and Model card traces to a generated file
+        run: uv run --frozen python scripts/check_traceability.py
