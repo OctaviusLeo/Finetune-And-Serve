@@ -1,0 +1,12 @@
+# Keep the pinned GitHub Actions in .github/workflows current, one grouped pull request a month.
+# Python dependencies are deliberately not listed: their exact pins in pyproject.toml and uv.lock
+# are part of every reported result's environment and change only with a deliberate re-run.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      github-actions:
+        patterns: ["*"]

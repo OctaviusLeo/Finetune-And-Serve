@@ -9,16 +9,27 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same branch or pull request cancels the run it supersedes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false  # nothing here pushes, so later steps get no token
+      # setup-uv publishes no floating major tag; Dependabot proposes version bumps.
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
           version: "0.13.1"
           python-version: "3.12"
+          # Keep downloaded wheels (PyTorch and its CUDA libraries, several GB) out of the
+          # Actions cache, as setup-uv did by default before v9.
+          prune-cache: true
       - name: Lint (ruff, rules in pyproject.toml)
         run: uvx ruff@0.17.0 check .
       - name: Install the locked environment
